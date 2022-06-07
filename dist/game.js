@@ -2945,15 +2945,19 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
   __name(big, "big");
 
   // code/patrol.js
-  function patrol(speed = 60, dir = 1) {
+  function patrol(speed = 50, dir = 1) {
     return {
       id: "patrol",
       require: ["pos", "area"],
       add() {
         this.on("collide", (obj, col) => {
-          if (col.isLeft() || col.isRight()) {
-            dir = -dir;
-          }
+          dir = -dir;
+        });
+      },
+      add() {
+        this.onCollide("coral", (c) => {
+          destroy(c);
+          play("chomp");
         });
       },
       update() {
@@ -2965,8 +2969,6 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
 
   // code/assets.js
   function loadAssets() {
-    loadSprite("bean", "sprites/bean.png");
-    loadSprite("ghosty", "sprites/ghosty.png");
     loadSprite("spike", "sprites/spike.png");
     loadSprite("grass", "sprites/grass.png");
     loadSprite("prize", "sprites/jumpy.png");
@@ -2976,44 +2978,50 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     loadSprite("meat", "sprites/meat.png");
     loadSprite("cots", "sprites/cots.png");
     loadSprite("sand", "sprites/sand.png");
+    loadSprite("boat", "sprites/boat.png");
+    loadSprite("coral", "sprites/coral.png");
     loadSound("coin", "sounds/score.mp3");
     loadSound("powerup", "sounds/powerup.mp3");
     loadSound("blip", "sounds/blip.mp3");
     loadSound("hit", "sounds/hit.mp3");
+    loadSound("score", "sounds/score.mp3");
     loadSound("portal", "sounds/portal.mp3");
+    loadSound("chomp", "sounds/chomp.mp3");
+    loadSprite("bean", "sprites/bean.png");
+    loadSprite("bean-2", "sprites/bean-needle.png");
+    loadSprite("been", "/sprites/bean-c.png", {
+      sliceX: 2,
+      anims: {
+        "needle": 0,
+        "normal": 1
+      }
+    });
   }
   __name(loadAssets, "loadAssets");
 
   // code/main.js
-  no();
+  var gameScore = 0;
+  var cotsE = 0;
+  var totalCots = 20;
+  no({
+    font: "apl386",
+    background: [50, 75, 255]
+  });
   loadAssets();
   var JUMP_FORCE = 1320;
   var MOVE_SPEED = 480;
   var FALL_DEATH = 2400;
   var LEVELS = [
     [
-      "                          $",
-      "                          $",
-      "                          $",
-      "                          $",
-      "                          $",
-      "           $$         =   $",
-      "  %      ====         =   $",
-      "                      =   $",
-      "                      =    ",
-      "       ^^      = >    =   @",
-      "==========================="
-    ],
-    [
-      "     $    $    $    $     $",
-      "     $    $    $    $     $",
-      "                           ",
-      "                           ",
-      "                           ",
-      "                           ",
-      "                           ",
-      " ^^^^>^^^^>^^^^>^^^^>^^^^^@",
-      "==========================="
+      "                                               ",
+      "                                               ",
+      "     ^^      &        &>&            >     $   ",
+      "   =====     =       ====    ===    ===^   =   ",
+      "  =  =      = =     =$$$$$  =   =   =  =   =   ",
+      "     =     =====    =  =  = =   = = ===    =   ",
+      " =   =    =     =   =$$$$$  =   =   =  =   @   ",
+      "  ===&$&$=       =   ==== &&&=== & $===    =   ",
+      "==============================================="
     ]
   ];
   var levelConf = {
@@ -3055,31 +3063,44 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     ],
     ">": () => [
       sprite("cots"),
-      area({ scale: 0.1 }),
+      area({ width: 128, height: 120 }),
+      scale(0.5),
       origin("bot"),
       body(),
       patrol(),
       "enemy"
     ],
     "@": () => [
-      sprite("portal"),
+      sprite("boat"),
       area({ scale: 0.5 }),
       origin("bot"),
       pos(0, -12),
+      body(),
       "portal"
+    ],
+    "&": () => [
+      sprite("coral"),
+      area(),
+      scale(1),
+      origin("bot"),
+      "coral"
     ]
   };
-  scene("game", ({ levelId, coins } = { levelId: 0, coins: 0 }) => {
+  var allEnemys = get("enemy");
+  every((allEnemys2) => {
+  });
+  scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots: totalCots }) => {
+    cotsE = 0;
     gravity(3200);
     const level = addLevel(LEVELS[levelId != null ? levelId : 0], levelConf);
     const player = add([
-      sprite("bean"),
+      sprite("bean-2"),
       pos(0, 0),
-      area(),
+      area({ scale: 0.8 }),
       scale(1),
       body(),
       big(),
-      origin("bot")
+      origin("left")
     ]);
     player.onUpdate(() => {
       camPos(player.pos);
@@ -3096,7 +3117,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       if (levelId + 1 < LEVELS.length) {
         go("game", {
           levelId: levelId + 1,
-          coins
+          score
         });
       } else {
         go("win");
@@ -3104,16 +3125,19 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     });
     player.onGround((l) => {
       if (l.is("enemy")) {
-        player.jump(JUMP_FORCE * 1.5);
-        destroy(l);
-        addKaboom(player.pos);
-        play("powerup");
-      }
-    });
-    player.onCollide("enemy", (e, col) => {
-      if (!col.isBottom()) {
         go("pricked");
         play("hit");
+      }
+    });
+    player.onCollide("enemy", (e) => {
+      if (isKeyDown("space")) {
+        destroy(e);
+        addKaboom(player.pos);
+        score += 10;
+        scoreLabel.text = score;
+        gameScore = score;
+        play("score");
+        cotsE++;
       }
     });
     let hasApple = false;
@@ -3124,12 +3148,6 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
         hasApple = true;
         play("blip");
       }
-    });
-    player.onCollide("apple", (a2) => {
-      destroy(a2);
-      player.biggify(3);
-      hasApple = false;
-      play("powerup");
     });
     let coinPitch = 0;
     onUpdate(() => {
@@ -3143,15 +3161,16 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
         detune: coinPitch
       });
       coinPitch += 100;
-      coins += 1;
-      coinsLabel.text = coins;
+      score += 1;
+      scoreLabel.text = score;
+      gameScore = score;
     });
-    const coinsLabel = add([
-      text(coins),
+    const scoreLabel = add([
+      text(score),
       pos(24, 24),
       fixed()
     ]);
-    onKeyPress("space", () => {
+    onKeyPress("up", () => {
       if (player.isGrounded()) {
         player.jump(JUMP_FORCE);
       }
@@ -3174,33 +3193,81 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
   });
   scene("lose", () => {
     add([
-      text("You Lose")
+      text("You Lose. Somehow you found this ending? Good job? idk must be a bug\nScore:" + gameScore)
     ]);
+    shake(1200);
     onKeyPress(() => go("game"));
   });
   scene("spiked", () => {
     add([
-      text("You got poked by a coral.\nYour suit burst,\nand you drowned\nRIP\n\nPress any key to continue")
+      text("You got poked by a coral.\nYour suit burst,\nand you drowned\nRIP\n\nPress any key to continue\nScore:" + gameScore)
     ]);
+    shake(120);
     onKeyPress(() => go("game"));
   });
   scene("pricked", () => {
     add([
-      text("You got pricked by a starfish\nand had to go to the hospital\n\nbe more careful next time\n\nPress any key to continue")
+      text("You got pricked by a starfish\nand had to go to the hospital\n\nbe more careful next time\n\nPress any key to continue\nScore:" + gameScore)
     ]);
+    shake(120);
+    onKeyPress(() => go("game"));
   });
   scene("drown", () => {
     add([
-      text("You drowned...\nBetter bring some more air\n\nlol\n\nPress any key to continue")
+      text("You drowned...\nBetter bring some more air\n\nlol\n\nPress any key to continue\nScore:" + gameScore)
     ]);
+    shake(120);
     onKeyPress(() => go("game"));
   });
   scene("win", () => {
     add([
-      text("You Win")
+      text("You Win!\nYou have successfully controled the outbreak of CoTS in the Jakub reef\nScore: " + gameScore + "\nCots Eliminated:" + cotsE + "/" + totalCots, {
+        font: "apl386o",
+        size: 55,
+        width: width()
+      })
     ]);
     onKeyPress(() => go("game"));
   });
-  go("game");
+  scene("startup", () => {
+    add([
+      text("If you aren't seeing text, you need a bigger screen. \nWelcome to CoTS hunter, \nA game made by me to simulate control of the invasive Crown-of-Thorns Starfish. This game simulates scuba divers exterminating the CoTS in outbreaks. Stay tuned for new features. (press any key to continue)", {
+        font: "apl386o",
+        size: 55,
+        width: width()
+      })
+    ]);
+    onKeyPress("f", () => {
+      fullscreen(!fullscreen());
+    });
+    onKeyPress(() => go("startup-2"));
+  });
+  scene("startup-2", () => {
+    add([
+      text("The thing is, this species only becomes invasive in large numbers, typically in out break population size. One or two CoTS are actually beneficial for a reef's ecosystem, but more, can cause devestating damage. Usually, one of the most effective ways to curb the population of a CoTS outbreak without damaging the ecosystem, is injecting the CoTS.(press any key to continue)", {
+        font: "apl386o",
+        size: 53,
+        width: width()
+      })
+    ]);
+    onKeyPress("f", () => {
+      fullscreen(!fullscreen());
+    });
+    onKeyPress(() => go("controls"));
+  });
+  scene("controls", () => {
+    add([
+      text("Use arrow keys for movement, once I get around to it you will have to use space to inject the starfish\n Press space and touch the starfish with the squirty pole thing, and you will exterminate it. (in real life it takes longer but whatever) (press any key to continue)\n(also press f for fullscreen)\nalso some weird bugs when you touch cots", {
+        font: "apl386o",
+        size: 55,
+        width: width()
+      })
+    ]);
+    onKeyPress("f", () => {
+      fullscreen(!fullscreen());
+    });
+    onKeyPress(() => go("game"));
+  });
+  go("startup");
 })();
 //# sourceMappingURL=game.js.map
