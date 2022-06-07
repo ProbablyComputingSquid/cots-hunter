@@ -65,7 +65,7 @@ const LEVELS = [
 		"                                               ",
 		"     ^^      &        &>&            >     $   ",
 		"   =====     =       ====    ===    ===^   =   ",
-		"  =  =      = =     =$$$$$  =   =   =  =   =   ",
+		"  %  =      = =     =$$$$$  =   =   =  =   =   ",
 		"     =     =====    =  =  = =   = = ===    =   ",
 		" =   =    =     =   =$$$$$  =   =   =  =   @   ",
 		"  ===&$&$=       =   ==== &&&=== & $===    =   ",
@@ -107,7 +107,7 @@ const levelConf = {
 		"danger",
 	],
 	"#": () => [
-		sprite("apple"),
+		sprite("meat"),
 		area(),
 		origin("bot"),
 		body(),
@@ -226,14 +226,15 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
 	})
   //fix up
 	// player grows big onCollide with an "apple" obj
-  /*
+  
 	player.onCollide("apple", (a) => {
 		destroy(a)
-		// as we defined in the big() component
-		player.biggify(3)
+		score +=2
+    scoreLabel.text = score
+    gameScore = score
 		hasApple = false
 		play("powerup")
-	})*/
+	})
 
 	let coinPitch = 0
 

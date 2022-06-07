@@ -3017,7 +3017,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       "                                               ",
       "     ^^      &        &>&            >     $   ",
       "   =====     =       ====    ===    ===^   =   ",
-      "  =  =      = =     =$$$$$  =   =   =  =   =   ",
+      "  %  =      = =     =$$$$$  =   =   =  =   =   ",
       "     =     =====    =  =  = =   = = ===    =   ",
       " =   =    =     =   =$$$$$  =   =   =  =   @   ",
       "  ===&$&$=       =   ==== &&&=== & $===    =   ",
@@ -3055,7 +3055,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       "danger"
     ],
     "#": () => [
-      sprite("apple"),
+      sprite("meat"),
       area(),
       origin("bot"),
       body(),
@@ -3148,6 +3148,14 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
         hasApple = true;
         play("blip");
       }
+    });
+    player.onCollide("apple", (a2) => {
+      destroy(a2);
+      score += 2;
+      scoreLabel.text = score;
+      gameScore = score;
+      hasApple = false;
+      play("powerup");
     });
     let coinPitch = 0;
     onUpdate(() => {
