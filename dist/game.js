@@ -3003,6 +3003,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
   var gameScore = 0;
   var cotsE = 0;
   var totalCots = 20;
+  var recharged = true;
   no({
     font: "apl386",
     background: [50, 75, 255]
@@ -3187,11 +3188,15 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     });
     let hasApple = false;
     player.onHeadbutt((obj) => {
-      if (obj.is("prize") && !hasApple) {
+      if (obj.is("prize") && !hasApple && recharged) {
         const apple = level.spawn("#", obj.gridPos.sub(0, 1));
         apple.jump();
         hasApple = true;
         play("blip");
+        recharged = false;
+        wait(5, () => {
+          recharged = true;
+        });
       }
     });
     player.onCollide("apple", (a2) => {
@@ -3310,7 +3315,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
   });
   scene("controls", () => {
     add([
-      text("Use arrow keys for movement, once I get around to it you will have to use space to inject the starfish\n Press space and touch the starfish with the squirty pole thing, and you will exterminate it. (in real life it takes longer but whatever) (press any key to continue)\n(also press f for fullscreen)\nalso some weird bugs when you touch cots", {
+      text("Use arrow keys for movement, once I get around to it you will have to use space to inject the starfish\n Press space and touch the starfish with the squirty pole thing, and you will exterminate it. (in real life it takes longer but whatever) (press any key to continue)\n(also press f for fullscreen)\n", {
         font: "apl386o",
         size: 55,
         width: width()

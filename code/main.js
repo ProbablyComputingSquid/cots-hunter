@@ -6,6 +6,7 @@ import loadAssets from "./assets"
 var gameScore = 0
 var cotsE = 0
 var totalCots = 20
+var recharged = true
 kaboom({
   font:"apl386",
   background: [50,75,255],
@@ -217,11 +218,15 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
 
 	// grow an apple if player's head bumps into an obj with "prize" tag
 	player.onHeadbutt((obj) => {
-		if (obj.is("prize") && !hasApple) {
+		if (obj.is("prize") && !hasApple && recharged) {
 			const apple = level.spawn("#", obj.gridPos.sub(0, 1))
 			apple.jump()
 			hasApple = true
 			play("blip")
+      recharged = false
+      wait(5, () => {
+        recharged = true
+      })
 		}
 	})
   //fix up
@@ -358,7 +363,7 @@ scene("startup-2", () => {
 })
 scene("controls", () => {
   add([
-    text("Use arrow keys for movement, once I get around to it you will have to use space to inject the starfish\n Press space and touch the starfish with the squirty pole thing, and you will exterminate it. (in real life it takes longer but whatever) (press any key to continue)\n(also press f for fullscreen)\nalso some weird bugs when you touch cots", {
+    text("Use arrow keys for movement, once I get around to it you will have to use space to inject the starfish\n Press space and touch the starfish with the squirty pole thing, and you will exterminate it. (in real life it takes longer but whatever) (press any key to continue)\n(also press f for fullscreen)\n", {
       font:"apl386o",
       size:55,
       width:width(),
