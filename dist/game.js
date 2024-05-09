@@ -2935,9 +2935,9 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
         timer = 0;
         isBig = false;
       },
-      biggify(time) {
+      biggify(time2) {
         destScale = 2;
-        timer = time;
+        timer = time2;
         isBig = true;
       }
     };
@@ -2945,18 +2945,21 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
   __name(big, "big");
 
   // code/patrol.js
-  function patrol(speed = 50, dir = 1) {
+  function patrol(player, speed = 50, dir = 1) {
     return {
       id: "patrol",
       require: ["pos", "area"],
       add() {
-        this.on("collide", (obj, col) => {
-          dir = -dir;
-        });
-      },
-      add() {
-        this.onCollide("coral", (c) => {
-          destroy(c);
+        this.onCollide("solid", (obj, col) => {
+          try {
+            if (col.isLeft() || col.isRight()) {
+              dir = -dir;
+            }
+          } catch (e) {
+            dir = -dir;
+          }
+        }), this.onCollide("coral", (coral) => {
+          destroy(coral);
           play("chomp");
         });
       },
@@ -2967,8 +2970,73 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
   }
   __name(patrol, "patrol");
 
+  // code/platformX.js
+  function platformX(player, speed = 150, dir = 1) {
+    return {
+      id: "platformX",
+      require: ["pos", "area"],
+      add() {
+        this.onCollide("solid", (obj, col) => {
+          try {
+            if (col.isLeft() || col.isRight()) {
+              dir = -dir;
+            }
+          } catch (e) {
+            dir = -dir;
+          }
+        }), this.onCollide("coral", (coral) => {
+          dir = -dir;
+        });
+      },
+      update() {
+        this.pos.x = this.pos.x + speed * dir * dt();
+      }
+    };
+  }
+  __name(platformX, "platformX");
+
+  // code/platformY.js
+  function platformY(player, speed = 150, dir = 1) {
+    return {
+      id: "platformY",
+      require: ["pos", "area"],
+      add() {
+        this.onCollide("solid", (obj, col) => {
+          try {
+            if (col.isUp() || col.isDown()) {
+              dir = -dir;
+            }
+          } catch (e) {
+            dir = -dir;
+          }
+        }), this.onCollide("coral", (coral) => {
+          dir = -dir;
+        });
+      },
+      update() {
+        this.pos.y = this.pos.y + speed * dir * dt();
+      }
+    };
+  }
+  __name(platformY, "platformY");
+
+  // code/boat(good).js
+  function boat(dir = 1) {
+    return {
+      id: "boat",
+      require: ["pos", "area"],
+      update() {
+        this.move(dir, 0);
+        dir = -dir;
+      }
+    };
+  }
+  __name(boat, "boat");
+
   // code/assets.js
   function loadAssets() {
+    loadSprite("purple-sand", "sprites/purple-sand.png");
+    loadSprite("bubbles", "sprites/bubbles.png");
     loadSprite("spike", "sprites/spike.png");
     loadSprite("grass", "sprites/grass.png");
     loadSprite("prize", "sprites/jumpy.png");
@@ -2989,28 +3057,50 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     loadSound("chomp", "sounds/chomp.mp3");
     loadSprite("bean", "sprites/bean.png");
     loadSprite("bean-2", "sprites/bean-needle.png");
-    loadSprite("been", "/sprites/bean-c.png", {
-      sliceX: 2,
-      anims: {
-        "needle": 0,
-        "normal": 1
-      }
-    });
+    loadSprite("bullet", "sprites/bullet.png");
+    loadSprite("pineapple", "sprites/pineapple.png");
+    loadSprite("pizza", "sprites/pizza.png");
+    loadSprite("energy", "sprites/lightening.png");
   }
   __name(loadAssets, "loadAssets");
 
   // code/main.js
+  var currentLevelTime = 0;
+  var dt3 = 0;
   var gameScore = 0;
   var cotsE = 0;
-  var totalCots = 20;
+  var totalCots = 0;
   var recharged = true;
+  var reload = true;
+  var bestTimes = Array(8).fill(Infinity);
+  var btRounded = Array(8).fill(Infinity);
+  var deathCount = 0;
+  var totalTime = 0;
+  var xvKept = 0.8;
+  var X_VEL = 0;
+  var timerStarted = false;
+  var fgRun = false;
+  var doubleJump = false;
+  var powerUP = 0;
+  var newLevel = true;
+  var charge = 2;
+  var attacking = 0;
+  var timeDiff = 0;
+  var display = btRounded;
+  var autosplit = false;
+  var lastLevelLoad = 0;
+  var lastLevelStart = 0;
+  var prevLevelTime = 0;
+  var prevTD = 0;
   no({
     font: "apl386",
     background: [50, 75, 255]
   });
   loadAssets();
+  var SW = width();
+  var SH = height();
   var JUMP_FORCE = 1320;
-  var MOVE_SPEED = 480;
+  var MOVE_SPEED = 120;
   var FALL_DEATH = 2400;
   var LEVELS = [
     [
@@ -3018,7 +3108,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       "                             $",
       "                             $",
       "                             $",
-      "                             $",
+      "                   e         $",
       "     ==  ==   $$   =     =   $",
       "    %  %     ===         =   $",
       "=                        =   $",
@@ -3042,34 +3132,145 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       "                                               ",
       "                                    ======     ",
       "                =    =          =====    =====",
-      "                            =    >>           =",
-      "                        =   =                 =",
-      " ==  $$$ === > > > > > === $$=$$= &&&& ^   > @=",
+      "                                               ",
+      "           %                =                 =",
+      "                        =   =    >            =",
+      " ==  $$$ === > > > > > === $$=$$= &&&&>^  >  @=",
       "==============================================="
     ],
     [
-      "                                               ",
-      "             $                                 ",
-      "     &&      ^                &                ",
-      "   =====   =====  =   =      >=>         =    =",
-      "   =         =    =$$$=     ^= =^    &   ==   =",
-      "=  ==%       =   ======     =====    =   = =  =",
-      "   =  >     &=    =   =   ^=     =^      =  =@=",
-      "   ===== &&  = && =   =   = &^&^& =  >^ ^=   ==",
-      "==============================================="
+      "                                                  =       ",
+      "                                                       =       ",
+      "                                                          =       ",
+      "                                      =   =                    =",
+      "             $                                                      =     $",
+      "     &&      ^                &               @                            =",
+      "   =====   =====  =   =      >=          =$   =                        =",
+      "   =         =    =$$$=      = =^    &   ==$  =                      ",
+      "=  ==%       =   ======     =====    =  == =$ =                          =",
+      "   =  >     &=    =   =   ^=     =^      =  =$                        =",
+      "   ===== && == && =   =   = &^&^& => =  ^=   ==                     =",
+      "======================================  =======              $ =",
+      "                                                             =",
+      "                                                    $$$$   $  ",
+      "                                          $  $  $  >$$$$   =",
+      "                                          $  $  $  =$$$$=",
+      "                                       =  =  =  =   ===="
     ],
     [
-      "                                           %   ",
-      "                                               ",
-      "     ^^      &        &>&            >     $   ",
-      "   =====     =       ====    ===    ===^   =   ",
-      "  %  =      = =     =$$$$$  =   =   =  =   =   ",
-      "     =     =====    =  =  = =   = = ===    =   ",
-      " =   =    =     =   =$$$$$  =   =   =  =   @   ",
-      "  ===&$&$=       =   ==== &&&=== & $===    =   ",
-      "==============================================="
+      "                                              ",
+      "                                           %",
+      "                                                     =    ===  =               =                                  ",
+      "     ^^      &        &>&                  $         =                                    ^                        ",
+      "   =====     =       ====    ===    ===^   =                                                                   =   ",
+      "  %  =      = =     =$$$$$  =   =   =  =   =                                                                       ",
+      "     =     =====    =  =  = = ! = = ===    =                                              =                         ",
+      " =   =    =     =   =$$$$$  =   =   =  =   @                                                                       ",
+      "  ===&$&$=       =   ==== &&&=== & $===    =                                                                        ",
+      "======================================================================================================================"
+    ],
+    [
+      "= =  =  =  = = ==    =    =    =    =  =  =      =      =                       ",
+      "                                             =          =                       ",
+      "                                                =       =                       ",
+      "                                                   =   =                       ",
+      "                                                      >=                       ",
+      "                                                       ==                       ",
+      "                                               =     =   =                       ",
+      "=   =   =   =   =   =   =   =   =   =   =   =     =      =                       ",
+      "  =   =   =   =   =   =   =   =   =   =   =              =                        ",
+      "   $   $   $   ^   $   $   $   $   $   $   $             =                       ",
+      "   =   =   =   =   =   =   =   =   =   =   =             =                       ",
+      "                                                                                =   @",
+      "                  =          =               =                                      =",
+      "                                                        =                       ",
+      "   y       =        p^e     =        =     =        =      =                       ",
+      "=======================================================================================================",
+      "                                                        ="
+    ],
+    [
+      "      >  =    =               &",
+      "===   ====                   >=$",
+      ">$$$ &$$$                    ===",
+      "  =======",
+      "&     &  #                     %%%",
+      "=>& x=====                     $$$",
+      "===$$$$$^^                     ===",
+      "=&       &                    =",
+      "===     ==       @   ==  #",
+      "===>>>> && &==       >$$$=",
+      "==============       =====",
+      "                 ="
+    ],
+    [
+      "   >$   $      &",
+      "==========    ===",
+      "   $$$  >        ",
+      "&y $$$  &    &&  ",
+      "===    ===%==== >",
+      "= $$          =  %",
+      "=>$$  &&      =  &",
+      "===========      =",
+      "=%%%      >    ===",
+      "=$$$      >    =  ",
+      "=&       =>  &&=  ",
+      "======   =======   &",
+      "=%%%               =  @",
+      "=$$$    &=> >x> &  ====",
+      "====================   "
+    ],
+    [
+      "   =            $",
+      "   =            =",
+      "   =        =",
+      "   =",
+      "   ===x     =      =     ^^^",
+      "x    =            ==     ===",
+      "=    = x   =       =     =     x    =",
+      "=    =      =      =     =       ^  =",
+      "=    =  x   =      =     =   x   ===",
+      "=    =       =     =          ==@      ",
+      "=    =   x   =   ==            x       =",
+      "=      >   >     =x x x                    ====",
+      "=              >y=                         ^  =",
+      "====================================       =",
+      "                            ===%%%          x =",
+      "                            =      x       x  =",
+      "                            = $$$            y=",
+      "                            =========   =======",
+      "                                    =   =",
+      "                                    =   =",
+      "                              =======   =======",
+      "                              =%             %=",
+      "                              =$$$$$     $$$$$=",
+      "                              ======x    ======",
+      "                              ==              =",
+      "                              =       x      =",
+      "                                    =====",
+      "                              =x             =",
+      "                              ======"
+    ],
+    [
+      "         xxxxxxxxxxx   x",
+      "           y      y    x",
+      "     w        y        x               @",
+      "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    ],
+    [
+      "                                       =   =                    ",
+      "                                       ===                     ",
+      "                                         $$     *      @       ",
+      "                                   =    $$$$    x      =       ",
+      "          =                            $$$$$$                ",
+      "                        >             $$$$$$$$  $              ",
+      "=                                     $$$^^$$$  =              ",
+      "==============================================================="
     ]
   ];
+  function options() {
+    return { id: "optimize" };
+  }
+  __name(options, "options");
   var levelConf = {
     width: 64,
     height: 64,
@@ -3077,35 +3278,47 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       sprite("sand"),
       area(),
       solid(),
-      origin("bot")
+      origin("bot"),
+      outview(),
+      options()
     ],
     "$": () => [
       sprite("coin"),
       area(),
       pos(0, -9),
       origin("bot"),
-      "coin"
+      "coin",
+      outview(),
+      options()
     ],
     "%": () => [
       sprite("prize"),
       area(),
       solid(),
       origin("bot"),
-      "prize"
+      "prize",
+      outview(),
+      options()
     ],
     "^": () => [
       sprite("spike"),
       area(),
-      solid(),
       origin("bot"),
-      "danger"
+      body(),
+      solid(),
+      "danger",
+      outview(),
+      options()
     ],
     "#": () => [
       sprite("meat"),
       area(),
-      origin("bot"),
       body(),
-      "apple"
+      origin("bot"),
+      "meat",
+      "passable",
+      outview(),
+      options()
     ],
     ">": () => [
       sprite("cots"),
@@ -3114,7 +3327,10 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       origin("bot"),
       body(),
       patrol(),
-      "enemy"
+      solid(),
+      "enemy",
+      outview({ hide: true }),
+      options()
     ],
     "@": () => [
       sprite("boat"),
@@ -3122,20 +3338,161 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       origin("bot"),
       pos(0, -12),
       body(),
-      "portal"
+      solid(),
+      "portal",
+      boat(),
+      outview(),
+      options()
     ],
     "&": () => [
       sprite("coral"),
       area(),
-      scale(1),
       origin("bot"),
-      "coral"
+      "coral",
+      outview(),
+      options()
+    ],
+    "x": () => [
+      sprite("purple-sand"),
+      area({ width: 63, height: 63 }),
+      solid(),
+      origin("bot"),
+      "movingX",
+      outview(),
+      options(),
+      platformX()
+    ],
+    "y": () => [
+      sprite("purple-sand"),
+      area(),
+      pos(),
+      origin("bot"),
+      "movingY",
+      outview(),
+      options(),
+      platformY()
+    ],
+    "!": () => [
+      origin("bot"),
+      area(),
+      "spawnpoint",
+      options()
+    ],
+    "p": () => [
+      sprite("pizza"),
+      area(),
+      body(),
+      origin("bot"),
+      "pizza",
+      "passable",
+      outview(),
+      options()
+    ],
+    "*": () => [
+      sprite("pineapple"),
+      area(),
+      body(),
+      origin("bot"),
+      "pineapple",
+      "passable",
+      outview(),
+      options()
+    ],
+    "e": () => [
+      sprite("energy"),
+      area(),
+      body(),
+      origin("bot"),
+      "energy",
+      "passable",
+      outview(),
+      options()
+    ],
+    "w": () => [
+      sprite("bubbles"),
+      area(),
+      origin("bot"),
+      outview(),
+      "UPbubbles"
     ]
   };
-  var allEnemys = get("enemy");
-  every((allEnemys2) => {
+  scene("levelselect", () => {
+    function button() {
+      return {
+        id: "button",
+        require: ["area", "scale"]
+      };
+    }
+    __name(button, "button");
+    for (let i = 1; i <= 8; i++) {
+      add([
+        i.toString(),
+        text(i.toString()),
+        pos(SW / 2 + i * 150 - 675, SH / 2),
+        area(),
+        button(),
+        scale(1),
+        origin("center"),
+        { number: i }
+      ]);
+    }
+    add([text("X Velocity: " + X_VEL), pos(10, SH - 100)]);
+    onUpdate("button", (b2) => {
+      if (b2.isHovering()) {
+        if (b2.scale.x < 2) {
+          b2.scale.x += 0.25;
+          b2.scale.y += 0.25;
+        }
+        if (isMouseDown()) {
+          go("game", {
+            levelId: b2.number - 1,
+            score: 0
+          });
+        }
+      } else if (b2.scale.x > 1) {
+        b2.scale.x -= 0.25;
+        b2.scale.y -= 0.25;
+      }
+    });
+  });
+  scene("speedrun?", () => {
+    add([
+      text("Do you want this to be a full\ngame speedrun?\n\npress y/n to continue\n\nTHE RUN MAY FAIL IF YOU DROWN")
+    ]);
+    onKeyPress("y", () => {
+      fgRun = true;
+      go("game");
+    });
+    onKeyPress("n", () => go("game"));
   });
   scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots: totalCots }) => {
+    lastLevelStart = time();
+    reload = true;
+    if (newLevel == true) {
+      currentLevelTime = 0;
+    }
+    timerStarted = false;
+    X_VEL = 0;
+    if (isKeyDown("w") || isKeyDown("up") || isKeyDown("a") || isKeyDown("left") || isKeyDown("d") || isKeyDown("right") || isKeyDown("s") || isKeyDown("down") || isKeyDown("space")) {
+      lastLevelLoad = time();
+    }
+    preLevelScore = score;
+    if (levelId == 0) {
+      lastDeath = time();
+    }
+    onKeyPress(() => {
+      if (!timerStarted) {
+        lastLevelLoad = time();
+        timerStarted = true;
+      }
+    });
+    onKeyPress(["q", "r"], () => {
+      if (fgRun) {
+        bestTimes = Array(8).fill(Infinity);
+        btRounded = Array(8).fill(Infinity);
+      }
+      go("game");
+    });
     cotsE = 0;
     gravity(3200);
     const level = addLevel(LEVELS[levelId != null ? levelId : 0], levelConf);
@@ -3146,71 +3503,279 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       scale(1),
       body(),
       big(),
-      origin("left")
+      origin("center"),
+      "player"
     ]);
-    player.onUpdate(() => {
-      camPos(player.pos);
-      if (player.pos.y >= FALL_DEATH) {
-        go("drown");
+    onUpdate("outview", (thing) => {
+      if (thing.isOutOfView()) {
+        thing.hidden = true;
+      } else {
+        thing.hidden = false;
       }
     });
+    onUpdate("sand", (b2) => {
+      b2.solid = b2.pos.dist(player.pos) >= 20;
+    });
+    player.onUpdate(() => {
+      if (isKeyDown("l") && fgRun == false) {
+        go("levelselect");
+      }
+      if ((isKeyDown("up") || isKeyDown("w")) && player.isGrounded()) {
+        player.jump(JUMP_FORCE);
+      }
+      if (isKeyDown("right") || isKeyDown("d")) {
+        X_VEL += MOVE_SPEED;
+        isFlipped = false;
+        player.flipX(false);
+      }
+      if (isKeyDown("left") || isKeyDown("a")) {
+        X_VEL -= MOVE_SPEED;
+        isFlipped = true;
+        player.flipX(true);
+      }
+      if (isKeyDown("down") || isKeyDown("s")) {
+        player.weight = 3;
+      } else {
+        player.weight = 1;
+      }
+      if (isKeyDown("shift") && charge > 0) {
+        charge -= 1 / dt3;
+        attacking = 10;
+        display = charge;
+      } else if (attacking > 0) {
+        attacking -= 1;
+        display = charge;
+      } else if (charge < 2) {
+        charge += 1 / dt3;
+        display = charge;
+      } else {
+      }
+      if (player.isGrounded()) {
+        xvKept = 0.8;
+        MOVE_SPEED = 120;
+      } else {
+        xvKept = 0.9;
+        MOVE_SPEED = 60;
+      }
+      player.move(X_VEL, 0);
+      X_VEL *= xvKept;
+      camPos(player.pos);
+      if (player.pos.y >= FALL_DEATH) {
+        if (fgRun == true) {
+          deathCount += 1;
+          go("game", { levelId, score: preLevelScore });
+        } else {
+          go("drown");
+        }
+      }
+    });
+    let isFlipped = false;
+    onKeyPress("space", () => {
+      pew();
+    });
+    function pew(bulletNum = 3) {
+      let dir = isFlipped ? -1 : 1;
+      if (reload) {
+        X_VEL += 3e3 * -dir;
+        for (let i = 0; i < bulletNum; i++) {
+          let bullet = add([
+            sprite("bullet"),
+            pos(player.pos.x + dir * 100, player.pos.y),
+            area({ scale: 0.5 }),
+            origin("center"),
+            scale(0.1),
+            "bullet",
+            cleanup()
+          ]);
+          if (isFlipped) {
+            bullet.flipX(true);
+          }
+          let spawnTime = time();
+          bullet.onCollide("solid", (e) => {
+            if (e.is("enemy")) {
+              destroy(e);
+              gameScore += 10;
+            }
+            addKaboom(bullet.pos);
+            destroy(bullet);
+          });
+          bullet.onUpdate(() => {
+            bullet.move(1024 * dir, 0);
+          });
+          reload = false;
+          wait(0.5, () => {
+            reload = true;
+          });
+        }
+      }
+    }
+    __name(pew, "pew");
     player.onCollide("danger", () => {
-      go("spiked");
-      play("hit");
+      if (fgRun == true) {
+        newLevel = false;
+        currentLevelTime += time() - lastLevelLoad;
+        deathCount += 1;
+        go("game", { levelId, score: preLevelScore });
+      } else {
+        go("spiked");
+        play("hit");
+      }
+    });
+    player.onCollide("coin", (c) => {
+      gameScore += 1;
+      destroy(c);
     });
     player.onCollide("portal", () => {
       play("portal");
+      prevLevelTime = time() - lastLevelLoad;
+      prevTD = timeDiff;
+      if (bestTimes[levelId] > time() - lastLevelLoad) {
+        if (!fgRun) {
+          bestTimes[levelId] = time() - lastLevelLoad;
+        } else {
+          currentLevelTime += time() - lastLevelLoad;
+          bestTimes[levelId] = currentLevelTime;
+          newLevel = true;
+        }
+        btRounded[levelId] = Math.round(bestTimes[levelId] * 100) / 100;
+      }
       if (levelId + 1 < LEVELS.length) {
         go("game", {
           levelId: levelId + 1,
           score
         });
       } else {
+        totalTime = 0;
+        for (let n = 0; n <= 7; n++) {
+          totalTime += bestTimes[n];
+        }
+        totalTime = Math.round(totalTime * 100) / 100;
         go("win");
       }
     });
-    player.onGround((l) => {
-      if (l.is("enemy")) {
-        go("pricked");
-        play("hit");
-      }
-    });
     player.onCollide("enemy", (e) => {
-      if (isKeyDown("space")) {
+      if (charge > 0 && keyIsDown("shift")) {
         destroy(e);
         addKaboom(player.pos);
         score += 10;
         scoreLabel.text = score;
         gameScore = score;
         play("score");
-        cotsE++;
+        cotsE += 1;
+      } else {
+        if (player.isFalling() && !player.isGrounded()) {
+          player.jump(JUMP_FORCE);
+          destroy(e);
+          addKaboom(player.pos);
+          score += 10;
+          scoreLabel.text = score;
+          gameScore = score;
+          play("score");
+          cotsE += 1;
+        } else {
+          if (fgRun == true) {
+            deathCount += 1;
+            currentLevelTime += time() - lastLevelLoad;
+            go("game", { levelId, score: preLevelScore });
+          } else {
+            go("pricked");
+            play("hit");
+          }
+        }
       }
     });
-    let hasApple = false;
+    player.onCollide((obj, col) => {
+      if (col.isLeft() || col.isRight()) {
+        if (X_VEL < 400) {
+          X_VEL = 0;
+        } else {
+          X_VEL *= 0.4;
+        }
+      }
+    });
     player.onHeadbutt((obj) => {
-      if (obj.is("prize") && !hasApple && recharged) {
-        const apple = level.spawn("#", obj.gridPos.sub(0, 1));
-        apple.jump();
-        hasApple = true;
+      if (obj.is("prize")) {
+        powerUP = randi(1, 101);
+        if (powerUP <= 50) {
+          const meat = level.spawn("#", obj.gridPos.sub(0, 1));
+          meat.jump();
+        } else if (powerUP <= 75 && powerUP > 50) {
+          let pineapple = level.spawn("*", obj.gridPos.sub(0, 1));
+          pineapple.jump();
+        } else if (powerUP > 75 && powerUP <= 90) {
+          let pizza = level.spawn("p", obj.gridPos.sub(0, 1));
+          pizza.jump();
+        } else if (powerUP > 90) {
+          let energy = level.spawn("e", obj.gridPos.sub(0, 1));
+          energy.jump();
+        }
         play("blip");
-        recharged = false;
-        wait(5, () => {
-          recharged = true;
-        });
+        destroy(obj);
+        recharged = true;
       }
     });
-    player.onCollide("apple", (a2) => {
+    player.onCollide("meat", (a2) => {
       destroy(a2);
-      score += 2;
+      score += 5;
       scoreLabel.text = score;
       gameScore = score;
-      hasApple = false;
+      hasmeat = false;
       play("powerup");
+    });
+    player.onCollide("pineapple", (a2) => {
+      destroy(a2);
+      score += 20;
+      scoreLabel.text = score;
+      gameScore = score;
+      hasmeat = false;
+      play("powerup");
+    });
+    player.onCollide("pizza", (a2) => {
+      shield = true;
+      debug.log("wow pizza");
+      destroy(a2);
+      play("powerup");
+    });
+    player.onCollide("energy", (a2) => {
+      doubleJump = true;
+      destroy(a2);
+      play("powerup");
+      debug.log(doubleJump);
+      wait(15, () => {
+        doubleJump = false;
+        debug.log(doubleJump);
+      });
     });
     let coinPitch = 0;
     onUpdate(() => {
+      timeDiff = -1 * (bestTimes[levelId] - (time() - lastLevelLoad));
+      if (time() - lastLevelStart < 2) {
+        display = prevTD;
+      } else if (keyIsDown("t")) {
+        display = timeDiff;
+        autosplit = true;
+      } else if (keyIsDown("b")) {
+        display = btRounded;
+        autosplit = false;
+      } else {
+        if (autosplit == true) {
+          display = timeDiff;
+        } else {
+          display = btRounded;
+        }
+      }
+      if (autosplit == true) {
+        display = timeDiff;
+      }
+      debug.log(display);
+      if (charge > 2) {
+        charge = 2;
+      } else if (charge < 0) {
+        charge = 0;
+      }
+      dt3 = time() - dt3;
       if (coinPitch > 0) {
-        coinPitch = Math.max(0, coinPitch - dt() * 100);
+        coinPitch = Math.max(0, coinPitch - dt3 * 100);
       }
     });
     player.onCollide("coin", (c) => {
@@ -3228,33 +3793,6 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       pos(24, 24),
       fixed()
     ]);
-    onKeyPress("up", () => {
-      if (player.isGrounded()) {
-        player.jump(JUMP_FORCE);
-      }
-    });
-    onKeyDown("left", () => {
-      player.move(-MOVE_SPEED, 0);
-    });
-    onKeyDown("right", () => {
-      player.move(MOVE_SPEED, 0);
-    });
-    onKeyPress("down", () => {
-      player.weight = 3;
-    });
-    onKeyRelease("down", () => {
-      player.weight = 1;
-    });
-    onKeyPress("f", () => {
-      fullscreen(!fullscreen());
-    });
-  });
-  scene("lose", () => {
-    add([
-      text("You Lose. Somehow you found this ending? Good job? idk must be a bug\nScore:" + gameScore)
-    ]);
-    shake(1200);
-    onKeyPress(() => go("game"));
   });
   scene("spiked", () => {
     add([
@@ -3275,57 +3813,30 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       text("You drowned...\nBetter bring some more air\n\nlol\n\nPress any key to continue\nScore:" + gameScore)
     ]);
     shake(120);
+    play("hit");
     onKeyPress(() => go("game"));
   });
   scene("win", () => {
     add([
-      text("You Win!\nYou have successfully controled the outbreak of CoTS in the Jakub reef\nScore: " + gameScore + "\nCots Eliminated:" + cotsE + "/" + totalCots, {
+      text(`You Win!
+You have successfully controled the outbreak of CoTS in the reef
+Score: ${gameScore}
+Cots Eliminated: ${cotsE}/${totalCots}
+Total time: ${totalTime} (deaths: ${deathCount})
+Press space to play again`, {
         font: "apl386o",
         size: 55,
         width: width()
       })
     ]);
-    onKeyPress(() => go("game"));
-  });
-  scene("startup", () => {
-    add([
-      text("If you aren't seeing text, you need a bigger screen. \nWelcome to CoTS hunter, \nA game made by me to simulate control of the invasive Crown-of-Thorns Starfish. This game simulates scuba divers exterminating the CoTS in outbreaks. Stay tuned for new features. (press any key to continue)", {
-        font: "apl386o",
-        size: 55,
-        width: width()
-      })
-    ]);
-    onKeyPress("f", () => {
-      fullscreen(!fullscreen());
+    onKeyPress("space", () => {
+      if (fgRun == true) {
+        bestTimes = Array(8).fill("Infinity");
+        btRounded = Array(8).fill("Infinity");
+      }
+      go("game");
     });
-    onKeyPress(() => go("startup-2"));
   });
-  scene("startup-2", () => {
-    add([
-      text("The thing is, this species only becomes invasive in large numbers, typically in out break population size. One or two CoTS are actually beneficial for a reef's ecosystem, but more, can cause devestating damage. Usually, one of the most effective ways to curb the population of a CoTS outbreak without damaging the ecosystem, is injecting the CoTS.(press any key to continue)", {
-        font: "apl386o",
-        size: 53,
-        width: width()
-      })
-    ]);
-    onKeyPress("f", () => {
-      fullscreen(!fullscreen());
-    });
-    onKeyPress(() => go("controls"));
-  });
-  scene("controls", () => {
-    add([
-      text("Use arrow keys for movement, once I get around to it you will have to use space to inject the starfish\n Press space and touch the starfish with the squirty pole thing, and you will exterminate it. (in real life it takes longer but whatever) (press any key to continue)\n(also press f for fullscreen)\n", {
-        font: "apl386o",
-        size: 55,
-        width: width()
-      })
-    ]);
-    onKeyPress("f", () => {
-      fullscreen(!fullscreen());
-    });
-    onKeyPress(() => go("game"));
-  });
-  go("startup");
+  go("speedrun?");
 })();
 //# sourceMappingURL=game.js.map

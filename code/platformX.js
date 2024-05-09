@@ -1,12 +1,11 @@
-// custom component controlling platform movement
-
-export default function patrol(player, speed = 50, dir = 1) {
+export default function platformX(player, speed = 150, dir = 1) {
 	return {
-		id: "patrol",
+		id: "platformX",
 		require: [ "pos", "area", ],
         add() {
             // sometimes throws an error randomly but it works most of the time
             this.onCollide("solid", (obj, col) => {
+            if ()
                 try{
 				    if (col.isLeft() || col.isRight()) {
                         dir = -dir
@@ -14,18 +13,12 @@ export default function patrol(player, speed = 50, dir = 1) {
                 } catch {dir = -dir}
 			}),
             this.onCollide("coral", (coral) => {
-                destroy(coral)
-                play("chomp")
+                dir = -dir
             })
         },
+    
         update() {
-            this.move(speed * dir, 0)
+            this.pos.x = this.pos.x + (speed * dir * dt())
 		},
-        /*add() {
-            this.onCollide("coral", (coral) => {
-                destroy(coral)
-                play("chomp")
-            })
-        }*/
 	}
 }

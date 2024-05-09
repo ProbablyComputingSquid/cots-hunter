@@ -1,0 +1,16 @@
+MAKE NEW PHYSICS ENGINE
+  - Selective collision queries
+  - Re-add all of the physics stuff, like falling
+  - Make there be less glitches
+
+Add more levels
+  - Longer levels?
+
+Powerups actually do things
+  - Give ideas
+
+Fix powerup hitboxes
+  - Currently the meat acts differently than the others
+  - From a speedrunning standpoint they should all have the same hitbox
+
+Autosplitter
