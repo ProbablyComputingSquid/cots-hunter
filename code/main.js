@@ -6,6 +6,7 @@ import platformX from "./platformX"
 import platformY from "./platformY"
 import boat from "./boat(good)"
 import loadAssets from "./assets"
+import music from "./music"
 
 // VARIABLES
 var currentLevelTime = 0
@@ -15,8 +16,10 @@ var cotsE = 0
 var totalCots = 0
 var recharged = true
 var reload = true
-var bestTimes = Array(8).fill(Infinity)
-var btRounded = Array(8).fill(Infinity)
+//var yCHECKS = [[],[],[],[],[],[],[5],[14],[5, 6, 7, 9, 11, 12, 15, 16, 24, 26, 28], [1, 2, 3, 4], [4]]
+//var xCHECKS = [[],[],[],[],[],[],[],[2],[17, 46], [12, 15, 19],[]]
+var bestTimes = Array(9).fill(Infinity)
+var btRounded = Array(9).fill(Infinity)
 // wrTimes has manual update, but nobody's trying anyway.
 //var wrTimes = Array(8).fill([1, 1.22, 1.92, 0.95, 1.13, 2.57, 0.65, 0.8])
 var deathCount = 0
@@ -26,7 +29,7 @@ var X_VEL = 0
 var timerStarted = false
 //var powerUps = ["meat","pineapple","pizza", "energy"]
 var fgRun = false
-//var preLevelScore = 0
+var preLevelScore = 0
 var doubleJump = false
 //var shield = false
 //var spacer = false
@@ -42,7 +45,9 @@ var lastLevelLoad = 0
 var lastLevelStart = 0
 var prevLevelTime = 0
 var prevTD = 0
+var speedier = false
 
+var numberOfBullets = 3
 kaboom({
     font: "apl386",
     background: [50, 75, 255],
@@ -54,32 +59,34 @@ const SW = width()
 const SH = height()
 const JUMP_FORCE = 1320
 let MOVE_SPEED = 120
+let original_speed = MOVE_SPEED
 const FALL_DEATH = 2400
 
 // LEVELS, MAP READER
 const LEVELS = [
+    ["o","@","="],
     [
-        "                             $",
-        "                             $",
-        "                             $",
-        "                             $",
-        "                   e         $",
-        "     ==  ==   $$   =     =   $",
-        "    %  %     ===         =   $",
-        "=                        =   $",
-        "=                        =    ",
-        "=   >&&   ^^   ^  = >    =   @",
-        "==============================",
+        "                                              =",
+        "                                $$$$$$$$$$$$$$$",
+        "                   =x                          $=",
+        "                      w                       $",
+        "                      w                       $",
+        "     ==  ==   $$   =  w  =                    $       @",
+        "o   %  %     ===      w  =                    $       =",
+        "=                     w  =&                   $",
+        "=                     w ===&                   ",
+        "=   >&&   ^^   ^  = >   ====&&       pe       y",
+        "=========================-====       xx       =",
     ],
     [
         "%                  $$$$$$$$ ",
-        "                 =   %  = ",
+        "o                =   %  = ",
         "= =   =         =           ",
         "            ==            ",
         "        ===      =         ",
         "                   &&&&&&  ",
         " =^&&>=&&>&&&&>&&&>====== @",
-        "===========================",
+        "===================------==",
     ],
     [
         "                                               ",
@@ -89,62 +96,32 @@ const LEVELS = [
         "                =    =          =====    =====",
         "                                               ",
         "           %                =                 =",
-        "                        =   =    >            =",
-        " ==  $$$ === > > > > > === $$=$$= &&&&>^  >  @=",
-        "===============================================",
+        " o                      =   =    >            =",
+        " ==  $$$ === > > > > > =-= $$=$$= &&&&>^  >  @=",
+        "=--======---===========---===-==-=============-",
     ],
     [
-        "                                                  =       ",
-        "                                                       =       ",
-        "                                                          =       ",
-        "                                      =   =                    =",
-        "             $                                                      =     $",
-        "     &&      ^                &               @                            =",
-        "   =====   =====  =   =      >=          =$   =                        =",
-        "   =         =    =$$$=      = =^    &   ==$  =                      ",
-        "=  ==%       =   ======     =====    =  == =$ =                          =",
-        "   =  >     &=    =   =   ^=     =^      =  =$                        =",
-        "   ===== && == && =   =   = &^&^& => =  ^=   ==                     =",
-        "======================================  =======              $ =",
-        "                                                             =",
-        "                                                    $$$$   $  ",
-        "                                          $  $  $  >$$$$   =",
-        "                                          $  $  $  =$$$$=",
-        "                                       =  =  =  =   ====",
-    ],
-    [   "                                              ",
-        "                                           %",
-        "                                                     =    ===  =               =                                  ",
-        "     ^^      &        &>&                  $         =                                    ^                        ",
-        "   =====     =       ====    ===    ===^   =                                                                   =   ",
-        "  %  =      = =     =$$$$$  =   =   =  =   =                                                                       ",
-        "     =     =====    =  =  = = ! = = ===    =                                              =                         ",
-        " =   =    =     =   =$$$$$  =   =   =  =   @                                                                       ",
-        "  ===&$&$=       =   ==== &&&=== & $===    =                                                                        ",
-        "======================================================================================================================",
-    ],
-    [
-        //" > > > > > > > > >> > > >   >>  >  > > > >  >> > >       =",
-        "= =  =  =  = = ==    =    =    =    =  =  =      =      =                       ",
-        "                                             =          =                       ",
-        "                                                =       =                       ",
-        "                                                   =   =                       ",
-        "                                                      >=                       ",
-        "                                                       ==                       ",
-        "                                               =     =   =                       ",
-        "=   =   =   =   =   =   =   =   =   =   =   =     =      =                       ",
-        "  =   =   =   =   =   =   =   =   =   =   =              =                        ",
-        "   $   $   $   ^   $   $   $   $   $   $   $             =                       ",
-        "   =   =   =   =   =   =   =   =   =   =   =             =                       ",
+        // uncomment line below for more fun
+        " > > > > > > > > >> > > >   >>  >  > > > >  >> > >       =",
+        "= =  =  =  = = ==    =    =    =    =  =  =      =      =",
+        "                                             =          =",
+        "                                                =       =",
+        "                                                   =   =",
+        "                                                      >=",
+        "                                                       ==",
+        "o                                              =     =   =",
+        "=   =   =   =   =   =   =   =   =   =   =   =     =      =",
+        "  =   =   =   =   =   =   =   =   =   =   =              =",
+        "   $   $   $   ^   $   $   $   $   $   $   $             =",
+        "   =   =   =   =   =   =   =   =   =   =   =             =",
         "                                                                                =   @",
         "                  =          =               =                                      =",
-        "                                                        =                       ",
-        "   y       =        p^e     =        =     =        =      =                       ",
-        "=======================================================================================================",
         "                                                        =",
+        "   y       =        p^e     =        =     =        =      =",
+        "===========-================-========-=====-========-======-=========================",
     ],
     [
-        "      >  =    =               &",
+        "o     >  =    =               &",
         "===   ====                   >=$",
         ">$$$ &$$$                    ===",
         "  =======",
@@ -153,54 +130,54 @@ const LEVELS = [
         "===$$$$$^^                     ===",
         "=&       &                    =",
         "===     ==       @   ==  #",
-        "===>>>> && &==       >$$$=",
-        "==============       =====",
+        "--=>>>> && &==       >$$$=",
+        "---=========--       ====-",
         "                 ="
 
     ],
     [
-        "   >$   $      &",
+        "o  >$   $      &",
         "==========    ===",
         "   $$$  >        ",
         "&y $$$  &    &&  ",
         "===    ===%==== >",
         "= $$          =  %",
         "=>$$  &&      =  &",
-        "===========      =",
+        "-==========      =",
         "=%%%      >    ===",
         "=$$$      >    =  ",
         "=&       =>  &&=  ",
-        "======   =======   &",
+        "-=====   =======   &",
         "=%%%               =  @",
         "=$$$    &=> >x> &  ====",
-        "====================   ",
+        "===================-   ",
     ],
     [
         "   =            $",
         "   =            =",
         "   =        =",
         "   =",
-        "   ===x     =      =     ^^^",
-        "x    =            ==     ===",
+        "o  ===x     =      =     ^^^",
+        "x    =            =-     ===",
         "=    = x   =       =     =     x    =",
         "=    =      =      =     =       ^  =",
         "=    =  x   =      =     =   x   ===",
         "=    =       =     =          ==@      ",
-        "=    =   x   =   ==            x       =",
-        "=      >   >     =x x x                    ====",
-        "=              >y=                         ^  =",
-        "====================================       =",
-        "                            ===%%%          x =",
+        "=    =   x   =   ==            xx      =",
+        "=      >   >    y=x x x                    ====",
+        "=              > =                         ^  =",
+        "-================-==================       =",
+        "                            -==%%%          x =",
         "                            =      x       x  =",
         "                            = $$$            y=",
-        "                            =========   =======",
+        "                            -========   ======-",
         "                                    =   =",
         "                                    =   =",
-        "                              =======   =======",
+        "                              -======   ======-",
         "                              =%             %=",
         "                              =$$$$$     $$$$$=",
-        "                              ======x    ======",
-        "                              ==              =",
+        "                              -=====x    =====-",
+        "                              -=              =",
         "                              =       x      =",
         "                                    =====",
         "                              =x             =",
@@ -209,18 +186,18 @@ const LEVELS = [
     [
         "         xxxxxxxxxxx   x",
         "           y      y    x",
-        "     w        y        x               @",
+        "o             y        x               @",
         "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     ],
     [
-        "                                       =   =                    ",
+        "                                       = o =                    ",
         "                                       ===                     ",
         "                                         $$     *      @       ",
         "                                   =    $$$$    x      =       ",
         "          =                            $$$$$$                ",
-        "                        >             $$$$$$$$  $              ",
+        "o                       >             $$$$$$$$  $              ",
         "=                                     $$$^^$$$  =              ",
-        "===============================================================",],]
+        "-===============================================-==============",],]
 
 function options() {
   return {id: "optimize"}
@@ -250,14 +227,20 @@ const levelConf = {
     // define each object as a list of components
     "=": () => [
         sprite("sand"),
+        "sand",
         area(),
         solid(),
         origin("bot"),
         outview(/*{hide:true}*/),
         options()
     ],
+    "-": () => [
+        sprite("sand"),
+        "internal",
+         area(),
+         origin("bot")
+    ],
     "$": () => [
-      
         sprite("coin"),
         area(),
         pos(0, -9),
@@ -316,7 +299,7 @@ const levelConf = {
         solid(),
         "portal",
         boat(),
-        outview(/*{hide:true}*/),
+        outview({hide:false}),
         options()
     ],
     "&": () => [
@@ -387,10 +370,30 @@ const levelConf = {
     "w": () => [
         sprite("bubbles"),
         area(),
-        body(),
+/*        body(),*/
         origin("bot"),
         outview(),
         "UPbubbles"
+    ],
+    "d": () => [
+        sprite("bubbles"),
+        area(),
+/*        body(),*/
+        origin("bot"),
+        outview(),
+        "SIDEbubbles"
+    ],
+    "o": () => [
+        pos(),
+        area({ scale: 0.8 }),
+        origin("center"),
+        "spawnpoint"
+    ],
+    "m": () => [
+        pos(),
+        area(),
+        "music",
+        //music()
     ]
 }
 
@@ -406,11 +409,11 @@ scene("levelselect", () => {
             require: ["area", "scale"]
         }
     }
-    for (let i = 1; i <= 8; i++) {
+    for (let i = 1; i <= 11; i++) {
         add([
             i.toString(),
             text(i.toString()),
-            pos(SW / 2 + i * 150 - 675, SH / 2),
+            pos(SW / 2 + i * 150 - 900, SH / 2),
             area(),
             button(),
             scale(1),
@@ -427,7 +430,7 @@ scene("levelselect", () => {
             }
             if (isMouseDown()) {
                 go("game", {
-                    levelId: b.number - 1,
+                    levelId: b.number,
                     score: 0
                 })
             }
@@ -438,21 +441,37 @@ scene("levelselect", () => {
 
     })
 })
-
+scene("intro-1", () => {
+  
+  add([
+    pos(0,0),
+    text("Better in new tab - not mobile adjusted | Press any key to continue", {
+      width: width(),
+      size: height()/5,
+    }),
+  ])
+  onKeyPress(()=> go("speedrun?"))
+})
 // speedrun option
 scene("speedrun?", () => {
     add([
-        text("Do you want this to be a full\ngame speedrun?\n\npress y/n to continue\n\nTHE RUN MAY FAIL IF YOU DROWN")
+      text("Do you want this to be a full\ngame speedrun?\npress y/n to continue",  {
+        width: width(),
+        size: height()/5,
+      })
     ])
+    
     onKeyPress("y", () => {
         fgRun = true
-        go("game")
+        music()
+        go("game", {levelId:0, score: 0})
     })
-    onKeyPress("n", () => go("game"))
+    
+    onKeyPress("n", () => {go("game", {levelId:0, score: 0},music())})
 })
 
 // MAIN GAME
-scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots: totalCots, }) => {
+scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCots: totalCots*/ }) => {
     lastLevelStart = time()
     reload = true
     if (newLevel == true) {
@@ -497,7 +516,7 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
         origin("center"),
         "player"
     ])
-
+  
     // optimization code that probably helps
     onUpdate("outview", (thing) => {
         if (thing.isOutOfView()) {
@@ -508,11 +527,11 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
     })
     //thing-a-thing that might help optimization
 
-    onUpdate("sand", (b) => {
+    /*onUpdate("sand", (b) => {
         b.solid = b.pos.dist(player.pos) >= 20
-    })
+    })*/
     // PLAYER UPDATE
-    player.onUpdate(() => {
+    onUpdate("player", (player) => {
         //key presses
         if (isKeyDown("l") && fgRun == false) {
             go("levelselect")
@@ -531,30 +550,7 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
             isFlipped = true
             player.flipX(true)
         }
-        /*onKeyPress("left", () => {
-            xvKept *= 2
-        }) hello?
-        onKeyRelease("left", () => {
-            xvKept *= 0.5
-        })
-        onKeyPress("a", () => {
-            xvKept *= 2
-        })
-        onKeyRelease("a", () => {
-            xvKept *= 0.5
-        })*/
-        /*onKeyPress("right", () => {
-          xvKept *= 2
-        })
-        onKeyRelease("right", () => {
-            xvKept *= 0.5
-        })
-        onKeyPress("d", () => {
-            xvKept *= 2
-        })
-        onKeyRelease("d", () => {
-            xvKept *= 0.5
-        })*/
+        
         if (isKeyDown("down") || isKeyDown("s")) {
             player.weight = 3
             //player.angle += 90
@@ -562,8 +558,13 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
             player.weight = 1
             //player.angle -= 90
         }
-
-        if (isKeyDown("shift") && charge > 0) {
+        if (charge < 0) {
+            if (autosplit) {
+                display = timeDiff
+            } else {
+                display = btRounded
+            }
+        } else if (isKeyDown("shift") && charge > 0) {
             charge -= 1/dt
             attacking = 10
             display = charge
@@ -573,15 +574,15 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
         } else if (charge < 2) {
             charge += 1/dt
             display = charge
-        } else {
         }
-
         if (player.isGrounded()) {
           xvKept = 0.8
-          MOVE_SPEED = 120
+          MOVE_SPEED = original_speed
+          if(speedier) {MOVE_SPEED*=2}
         } else {
           xvKept = 0.9
-          MOVE_SPEED = 60
+          MOVE_SPEED = original_speed/2
+          if(speedier) {MOVE_SPEED*=2}
         }
         
         // move the player, slow them down
@@ -605,12 +606,11 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
     onKeyPress("space", () => {
         pew()
     })
-    function pew(bulletNum = 3) {
+    function pew(bulletNum = 1) {
         let dir = isFlipped ? -1 : 1
         if (reload /*&&!isKeyDown("down")*/) {
             // recoil effect
             X_VEL += 3000 * -dir
-          
             // make the bullet
           for(let i = 0; i < bulletNum;i++) {
             let bullet = add([
@@ -666,7 +666,7 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
             go("game", {levelId: levelId, score: preLevelScore})
         } else {
             go("spiked")
-            play("hit")
+            play("hit", {volume: 0.25})
         }
     })
 
@@ -678,9 +678,10 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
 
     // level end code
     player.onCollide("portal", () => {
-        play("portal")
+        play("portal", {volume:0.25})
         prevLevelTime = time() - lastLevelLoad
         prevTD = timeDiff
+        display = prevTD
         // set the player's new best time for the level, if needed
         if (bestTimes[levelId] > time() - lastLevelLoad) {
             if (!fgRun) {
@@ -700,7 +701,7 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
             })
         } else {
             totalTime = 0
-            for (let n = 0; n <= 7; n++) {
+            for (let n = 1; n <= 8; n++) {
                 totalTime += bestTimes[n]
             }
             totalTime = Math.round(totalTime * 100) / 100
@@ -719,7 +720,7 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
         score += 10
         scoreLabel.text = score
         gameScore = score
-        play("score")
+        play("score", {volume:0.25})
         cotsE += 1
       } else {
         if (player.isFalling() && !player.isGrounded()) {
@@ -730,7 +731,7 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
             score += 10
             scoreLabel.text = score
             gameScore = score
-            play("score")
+            play("score", {volume:0.25})
             cotsE += 1
         } else {
             if (fgRun == true) {
@@ -739,7 +740,7 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
               go("game", {levelId: levelId, score: preLevelScore})
             } else {
               go("pricked")
-              play("hit")
+              play("hit", {volume:0.25})
             }
         }
       }
@@ -763,12 +764,13 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
             }
         }
     })
-  
+    
     // grow an meat if player's head bumps into an obj with "prize" tag
     player.onHeadbutt((obj) => {
         if (obj.is("prize")) {// && recharged) {
             powerUP = randi(1,101)
             //debug.log(powerUP)
+          if(!fgRun){
             if (powerUP <= 50) {
               /*let pizza = level.spawn("p", obj.gridPos.sub(0,1))
               pizza.jump()*/
@@ -786,11 +788,26 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
             }
             
             //hasmeat = true
-            play("blip")
+            play("blip", {volume:0.25})
             //recharged = false
             destroy(obj)
             recharged = true
             //recharge()
+          } else {
+            if(powerUP <= 75) {
+              const meat = level.spawn("#", obj.gridPos.sub(0, 1))  
+              meat.jump()
+            } else if (powerUP > 75 && powerUP >=100 ) {
+              let pineapple = level.spawn("*", obj.gridPos.sub(0,1))
+              pineapple.jump()
+            }
+            //hasmeat = true
+            play("blip", {volume:0.25})
+            //recharged = false
+            destroy(obj)
+            recharged = true
+            //recharge()
+          }
         }
     })
     // fix up
@@ -800,7 +817,7 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
         scoreLabel.text = score
         gameScore = score
         hasmeat = false
-        play("powerup")
+        play("powerup", {volume:0.25})
     })
     player.onCollide("pineapple", (a) => {
       destroy(a)
@@ -808,43 +825,67 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
       scoreLabel.text = score
       gameScore = score
       hasmeat = false
-      play("powerup")
+      play("powerup", {volume:0.25})
     })
     player.onCollide("pizza", (a) => {
-      shield = true
+      
       debug.log("wow pizza")
       destroy(a)
-      play("powerup")
+      play("powerup", {volume:0.25})
+      speedier = true
+      wait(15, () => {speedier = false})
     })
     player.onCollide("energy", (a) => {
       doubleJump = true
       destroy(a)
-      play("powerup")
+      play("powerup", {volume:0.25})
+      gravity(3200/2)
       debug.log(doubleJump)
       wait(15, () => {
         doubleJump = false
         debug.log(doubleJump)
+        debug.log("heavy now")
+        gravity(3200)
       })
     })
 
+
+
+
+    //bubble functionality
+    
+    player.onCollide("UPbubbles", (w) => {
+      player.jump(1000)
+    })
+//maybe make player move to target bubble
+    //side buble wow
+    let tempSpeed = randi(80,120)
+    player.onCollide("SIDEbubbles", (w) => {
+      tempSpeed = tempSpeed + randi(80,120) 
+      tempSpeed = tempSpeed % 200
+      player.move(tempSpeed,randi(50,150))
+      
+    })
     let coinPitch = 0
 
     onUpdate(() => {
         timeDiff = -1 * (bestTimes[levelId] - (time() - lastLevelLoad))
-        if ((time() - lastLevelStart) < 2) {
-            display = (prevTD)
-        } else if (keyIsDown("t")) {
-            display = timeDiff
-            autosplit = true
-        } else if (keyIsDown("b")) {
-            display = btRounded
-            autosplit = false
-        } else {
-            if (autosplit == true) {
-                display = timeDiff
-            } else {
-                display = btRounded
-            }
+        if (!(display == charge)) {
+          if ((time() - lastLevelStart) < 2) {
+              display = (prevTD)
+          } else if (keyIsDown("t")) {
+              display = timeDiff
+              autosplit = true
+          } else if (keyIsDown("b")) {
+              display = btRounded
+              autosplit = false
+          } else {
+              if (autosplit == true) {
+                  display = timeDiff
+              } else {
+                  display = btRounded
+              }
+          }
         }
         if (autosplit == true) {
             display = timeDiff
@@ -865,13 +906,13 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots
         destroy(c)
         play("coin", {
             detune: coinPitch,
+            volume: 0.25
         })
         coinPitch += 100
         score += 1
         scoreLabel.text = score
         gameScore = score
     })
-
     const scoreLabel = add([
         text(score),
         pos(24, 24),
@@ -894,12 +935,16 @@ scene("spiked", () => {
         text("You got poked by a coral.\nYour suit burst,\nand you drowned\nRIP\n\nPress any key to continue\nScore:" + gameScore),
     ])
     shake(120)
+    speedier = false
+    gravity(3200)
     onKeyPress(() => go("game"))
 })
 scene("pricked", () => {
     add([
         text("You got pricked by a starfish\nand had to go to the hospital\n\nbe more careful next time\n\nPress any key to continue\nScore:" + gameScore)
     ])
+    speedier = false
+    gravity(3200)
     shake(120)
     onKeyPress(() => go("game"))
 })
@@ -907,8 +952,10 @@ scene("drown", () => {
     add([
         text("You drowned...\nBetter bring some more air\n\nlol\n\nPress any key to continue\nScore:" + gameScore),
     ])
+    speedier = false
+    gravity(3200)
     shake(120)
-    play("hit")
+    play("hit", {volume:0.25})
     onKeyPress(() => go("game"))
 })
 
@@ -970,4 +1017,4 @@ scene("controls", () => {
     })
   onKeyPress(() => go("game"))
 })*/
-go("speedrun?")
+go("intro-1")

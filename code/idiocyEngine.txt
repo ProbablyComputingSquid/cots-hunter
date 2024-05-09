@@ -1,0 +1,4 @@
+ok so heres the plan
+blocks only check for platform collisions if all conditions are met
+  1. they are at the same x/y pos as a platform
+  2. they are within 20 of a platform  

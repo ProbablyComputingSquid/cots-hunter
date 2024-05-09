@@ -20,6 +20,7 @@ v2.0 - Acceleration and bullet boosting!
     v2.4.1 - Up-down moving platforms now... work differently
   v2.5 - Autosplitter (sort of) [main.js 827]
   v2.6 - Moving platforms now work perfectly as intended with no bugs, only features. Also WAY less lag!
+    v2.6.1 - Music!
 
 [speculative future updates]
 - Powerups do things, and become optionally deterministic(?)

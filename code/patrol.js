@@ -15,17 +15,11 @@ export default function patrol(player, speed = 50, dir = 1) {
 			}),
             this.onCollide("coral", (coral) => {
                 destroy(coral)
-                play("chomp")
+                play("chomp", {volume:0.25})
             })
         },
         update() {
             this.move(speed * dir, 0)
 		},
-        /*add() {
-            this.onCollide("coral", (coral) => {
-                destroy(coral)
-                play("chomp")
-            })
-        }*/
 	}
 }

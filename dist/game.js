@@ -2960,7 +2960,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
           }
         }), this.onCollide("coral", (coral) => {
           destroy(coral);
-          play("chomp");
+          play("chomp", { volume: 0.25 });
         });
       },
       update() {
@@ -2977,12 +2977,14 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       require: ["pos", "area"],
       add() {
         this.onCollide("solid", (obj, col) => {
-          try {
-            if (col.isLeft() || col.isRight()) {
+          if (!obj.is("platformY")) {
+            try {
+              if (col.isLeft() || col.isRight()) {
+                dir = -dir;
+              }
+            } catch (e) {
               dir = -dir;
             }
-          } catch (e) {
-            dir = -dir;
           }
         }), this.onCollide("coral", (coral) => {
           dir = -dir;
@@ -3055,6 +3057,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     loadSound("score", "sounds/score.mp3");
     loadSound("portal", "sounds/portal.mp3");
     loadSound("chomp", "sounds/chomp.mp3");
+    loadSound("CH2-Music", "sounds/CH2-Music.mp3");
     loadSprite("bean", "sprites/bean.png");
     loadSprite("bean-2", "sprites/bean-needle.png");
     loadSprite("bullet", "sprites/bullet.png");
@@ -3064,6 +3067,12 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
   }
   __name(loadAssets, "loadAssets");
 
+  // code/music.js
+  function music() {
+    const music2 = play("CH2-Music", { volume: 2, loop: true });
+  }
+  __name(music, "music");
+
   // code/main.js
   var currentLevelTime = 0;
   var dt3 = 0;
@@ -3072,14 +3081,15 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
   var totalCots = 0;
   var recharged = true;
   var reload = true;
-  var bestTimes = Array(8).fill(Infinity);
-  var btRounded = Array(8).fill(Infinity);
+  var bestTimes = Array(9).fill(Infinity);
+  var btRounded = Array(9).fill(Infinity);
   var deathCount = 0;
   var totalTime = 0;
   var xvKept = 0.8;
   var X_VEL = 0;
   var timerStarted = false;
   var fgRun = false;
+  var preLevelScore = 0;
   var doubleJump = false;
   var powerUP = 0;
   var newLevel = true;
@@ -3092,6 +3102,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
   var lastLevelStart = 0;
   var prevLevelTime = 0;
   var prevTD = 0;
+  var speedier = false;
   no({
     font: "apl386",
     background: [50, 75, 255]
@@ -3101,30 +3112,32 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
   var SH = height();
   var JUMP_FORCE = 1320;
   var MOVE_SPEED = 120;
+  var original_speed = MOVE_SPEED;
   var FALL_DEATH = 2400;
   var LEVELS = [
+    ["o", "@", "="],
     [
-      "                             $",
-      "                             $",
-      "                             $",
-      "                             $",
-      "                   e         $",
-      "     ==  ==   $$   =     =   $",
-      "    %  %     ===         =   $",
-      "=                        =   $",
-      "=                        =    ",
-      "=   >&&   ^^   ^  = >    =   @",
-      "=============================="
+      "                                              =",
+      "                                $$$$$$$$$$$$$$$",
+      "                   =x                          $=",
+      "                      w                       $",
+      "                      w                       $",
+      "     ==  ==   $$   =  w  =                    $       @",
+      "o   %  %     ===      w  =                    $       =",
+      "=                     w  =&                   $",
+      "=                     w ===&                   ",
+      "=   >&&   ^^   ^  = >   ====&&       pe       y",
+      "=========================-====       xx       ="
     ],
     [
       "%                  $$$$$$$$ ",
-      "                 =   %  = ",
+      "o                =   %  = ",
       "= =   =         =           ",
       "            ==            ",
       "        ===      =         ",
       "                   &&&&&&  ",
       " =^&&>=&&>&&&&>&&&>====== @",
-      "==========================="
+      "===================------=="
     ],
     [
       "                                               ",
@@ -3134,62 +3147,30 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       "                =    =          =====    =====",
       "                                               ",
       "           %                =                 =",
-      "                        =   =    >            =",
-      " ==  $$$ === > > > > > === $$=$$= &&&&>^  >  @=",
-      "==============================================="
+      " o                      =   =    >            =",
+      " ==  $$$ === > > > > > =-= $$=$$= &&&&>^  >  @=",
+      "=--======---===========---===-==-=============-"
     ],
     [
-      "                                                  =       ",
-      "                                                       =       ",
-      "                                                          =       ",
-      "                                      =   =                    =",
-      "             $                                                      =     $",
-      "     &&      ^                &               @                            =",
-      "   =====   =====  =   =      >=          =$   =                        =",
-      "   =         =    =$$$=      = =^    &   ==$  =                      ",
-      "=  ==%       =   ======     =====    =  == =$ =                          =",
-      "   =  >     &=    =   =   ^=     =^      =  =$                        =",
-      "   ===== && == && =   =   = &^&^& => =  ^=   ==                     =",
-      "======================================  =======              $ =",
-      "                                                             =",
-      "                                                    $$$$   $  ",
-      "                                          $  $  $  >$$$$   =",
-      "                                          $  $  $  =$$$$=",
-      "                                       =  =  =  =   ===="
-    ],
-    [
-      "                                              ",
-      "                                           %",
-      "                                                     =    ===  =               =                                  ",
-      "     ^^      &        &>&                  $         =                                    ^                        ",
-      "   =====     =       ====    ===    ===^   =                                                                   =   ",
-      "  %  =      = =     =$$$$$  =   =   =  =   =                                                                       ",
-      "     =     =====    =  =  = = ! = = ===    =                                              =                         ",
-      " =   =    =     =   =$$$$$  =   =   =  =   @                                                                       ",
-      "  ===&$&$=       =   ==== &&&=== & $===    =                                                                        ",
-      "======================================================================================================================"
-    ],
-    [
-      "= =  =  =  = = ==    =    =    =    =  =  =      =      =                       ",
-      "                                             =          =                       ",
-      "                                                =       =                       ",
-      "                                                   =   =                       ",
-      "                                                      >=                       ",
-      "                                                       ==                       ",
-      "                                               =     =   =                       ",
-      "=   =   =   =   =   =   =   =   =   =   =   =     =      =                       ",
-      "  =   =   =   =   =   =   =   =   =   =   =              =                        ",
-      "   $   $   $   ^   $   $   $   $   $   $   $             =                       ",
-      "   =   =   =   =   =   =   =   =   =   =   =             =                       ",
+      "= =  =  =  = = ==    =    =    =    =  =  =      =      =",
+      "                                             =          =",
+      "                                                =       =",
+      "                                                   =   =",
+      "                                                      >=",
+      "                                                       ==",
+      "o                                              =     =   =",
+      "=   =   =   =   =   =   =   =   =   =   =   =     =      =",
+      "  =   =   =   =   =   =   =   =   =   =   =              =",
+      "   $   $   $   ^   $   $   $   $   $   $   $             =",
+      "   =   =   =   =   =   =   =   =   =   =   =             =",
       "                                                                                =   @",
       "                  =          =               =                                      =",
-      "                                                        =                       ",
-      "   y       =        p^e     =        =     =        =      =                       ",
-      "=======================================================================================================",
-      "                                                        ="
+      "                                                        =",
+      "   y       =        p^e     =        =     =        =      =",
+      "===========-================-========-=====-========-======-========================="
     ],
     [
-      "      >  =    =               &",
+      "o     >  =    =               &",
       "===   ====                   >=$",
       ">$$$ &$$$                    ===",
       "  =======",
@@ -3198,53 +3179,53 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       "===$$$$$^^                     ===",
       "=&       &                    =",
       "===     ==       @   ==  #",
-      "===>>>> && &==       >$$$=",
-      "==============       =====",
+      "--=>>>> && &==       >$$$=",
+      "---=========--       ====-",
       "                 ="
     ],
     [
-      "   >$   $      &",
+      "o  >$   $      &",
       "==========    ===",
       "   $$$  >        ",
       "&y $$$  &    &&  ",
       "===    ===%==== >",
       "= $$          =  %",
       "=>$$  &&      =  &",
-      "===========      =",
+      "-==========      =",
       "=%%%      >    ===",
       "=$$$      >    =  ",
       "=&       =>  &&=  ",
-      "======   =======   &",
+      "-=====   =======   &",
       "=%%%               =  @",
       "=$$$    &=> >x> &  ====",
-      "====================   "
+      "===================-   "
     ],
     [
       "   =            $",
       "   =            =",
       "   =        =",
       "   =",
-      "   ===x     =      =     ^^^",
-      "x    =            ==     ===",
+      "o  ===x     =      =     ^^^",
+      "x    =            =-     ===",
       "=    = x   =       =     =     x    =",
       "=    =      =      =     =       ^  =",
       "=    =  x   =      =     =   x   ===",
       "=    =       =     =          ==@      ",
-      "=    =   x   =   ==            x       =",
-      "=      >   >     =x x x                    ====",
-      "=              >y=                         ^  =",
-      "====================================       =",
-      "                            ===%%%          x =",
+      "=    =   x   =   ==            xx      =",
+      "=      >   >    y=x x x                    ====",
+      "=              > =                         ^  =",
+      "-================-==================       =",
+      "                            -==%%%          x =",
       "                            =      x       x  =",
       "                            = $$$            y=",
-      "                            =========   =======",
+      "                            -========   ======-",
       "                                    =   =",
       "                                    =   =",
-      "                              =======   =======",
+      "                              -======   ======-",
       "                              =%             %=",
       "                              =$$$$$     $$$$$=",
-      "                              ======x    ======",
-      "                              ==              =",
+      "                              -=====x    =====-",
+      "                              -=              =",
       "                              =       x      =",
       "                                    =====",
       "                              =x             =",
@@ -3253,18 +3234,18 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     [
       "         xxxxxxxxxxx   x",
       "           y      y    x",
-      "     w        y        x               @",
+      "o             y        x               @",
       "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     ],
     [
-      "                                       =   =                    ",
+      "                                       = o =                    ",
       "                                       ===                     ",
       "                                         $$     *      @       ",
       "                                   =    $$$$    x      =       ",
       "          =                            $$$$$$                ",
-      "                        >             $$$$$$$$  $              ",
+      "o                       >             $$$$$$$$  $              ",
       "=                                     $$$^^$$$  =              ",
-      "==============================================================="
+      "-===============================================-=============="
     ]
   ];
   function options() {
@@ -3276,11 +3257,18 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     height: 64,
     "=": () => [
       sprite("sand"),
+      "sand",
       area(),
       solid(),
       origin("bot"),
       outview(),
       options()
+    ],
+    "-": () => [
+      sprite("sand"),
+      "internal",
+      area(),
+      origin("bot")
     ],
     "$": () => [
       sprite("coin"),
@@ -3341,7 +3329,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       solid(),
       "portal",
       boat(),
-      outview(),
+      outview({ hide: false }),
       options()
     ],
     "&": () => [
@@ -3365,6 +3353,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     "y": () => [
       sprite("purple-sand"),
       area(),
+      solid(),
       pos(),
       origin("bot"),
       "movingY",
@@ -3414,6 +3403,24 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       origin("bot"),
       outview(),
       "UPbubbles"
+    ],
+    "d": () => [
+      sprite("bubbles"),
+      area(),
+      origin("bot"),
+      outview(),
+      "SIDEbubbles"
+    ],
+    "o": () => [
+      pos(),
+      area({ scale: 0.8 }),
+      origin("center"),
+      "spawnpoint"
+    ],
+    "m": () => [
+      pos(),
+      area(),
+      "music"
     ]
   };
   scene("levelselect", () => {
@@ -3424,11 +3431,11 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       };
     }
     __name(button, "button");
-    for (let i = 1; i <= 8; i++) {
+    for (let i = 1; i <= 11; i++) {
       add([
         i.toString(),
         text(i.toString()),
-        pos(SW / 2 + i * 150 - 675, SH / 2),
+        pos(SW / 2 + i * 150 - 900, SH / 2),
         area(),
         button(),
         scale(1),
@@ -3445,7 +3452,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
         }
         if (isMouseDown()) {
           go("game", {
-            levelId: b2.number - 1,
+            levelId: b2.number,
             score: 0
           });
         }
@@ -3455,17 +3462,33 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       }
     });
   });
+  scene("intro-1", () => {
+    add([
+      pos(0, 0),
+      text("Better in new tab - not mobile adjusted | Press any key to continue", {
+        width: width(),
+        size: height() / 5
+      })
+    ]);
+    onKeyPress(() => go("speedrun?"));
+  });
   scene("speedrun?", () => {
     add([
-      text("Do you want this to be a full\ngame speedrun?\n\npress y/n to continue\n\nTHE RUN MAY FAIL IF YOU DROWN")
+      text("Do you want this to be a full\ngame speedrun?\npress y/n to continue", {
+        width: width(),
+        size: height() / 5
+      })
     ]);
     onKeyPress("y", () => {
       fgRun = true;
-      go("game");
+      music();
+      go("game", { levelId: 0, score: 0 });
     });
-    onKeyPress("n", () => go("game"));
+    onKeyPress("n", () => {
+      go("game", { levelId: 0, score: 0 }, music());
+    });
   });
-  scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0, numOfCots: totalCots }) => {
+  scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0 }) => {
     lastLevelStart = time();
     reload = true;
     if (newLevel == true) {
@@ -3513,32 +3536,35 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
         thing.hidden = false;
       }
     });
-    onUpdate("sand", (b2) => {
-      b2.solid = b2.pos.dist(player.pos) >= 20;
-    });
-    player.onUpdate(() => {
+    onUpdate("player", (player2) => {
       if (isKeyDown("l") && fgRun == false) {
         go("levelselect");
       }
-      if ((isKeyDown("up") || isKeyDown("w")) && player.isGrounded()) {
-        player.jump(JUMP_FORCE);
+      if ((isKeyDown("up") || isKeyDown("w")) && player2.isGrounded()) {
+        player2.jump(JUMP_FORCE);
       }
       if (isKeyDown("right") || isKeyDown("d")) {
         X_VEL += MOVE_SPEED;
         isFlipped = false;
-        player.flipX(false);
+        player2.flipX(false);
       }
       if (isKeyDown("left") || isKeyDown("a")) {
         X_VEL -= MOVE_SPEED;
         isFlipped = true;
-        player.flipX(true);
+        player2.flipX(true);
       }
       if (isKeyDown("down") || isKeyDown("s")) {
-        player.weight = 3;
+        player2.weight = 3;
       } else {
-        player.weight = 1;
+        player2.weight = 1;
       }
-      if (isKeyDown("shift") && charge > 0) {
+      if (charge < 0) {
+        if (autosplit) {
+          display = timeDiff;
+        } else {
+          display = btRounded;
+        }
+      } else if (isKeyDown("shift") && charge > 0) {
         charge -= 1 / dt3;
         attacking = 10;
         display = charge;
@@ -3548,19 +3574,24 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       } else if (charge < 2) {
         charge += 1 / dt3;
         display = charge;
-      } else {
       }
-      if (player.isGrounded()) {
+      if (player2.isGrounded()) {
         xvKept = 0.8;
-        MOVE_SPEED = 120;
+        MOVE_SPEED = original_speed;
+        if (speedier) {
+          MOVE_SPEED *= 2;
+        }
       } else {
         xvKept = 0.9;
-        MOVE_SPEED = 60;
+        MOVE_SPEED = original_speed / 2;
+        if (speedier) {
+          MOVE_SPEED *= 2;
+        }
       }
-      player.move(X_VEL, 0);
+      player2.move(X_VEL, 0);
       X_VEL *= xvKept;
-      camPos(player.pos);
-      if (player.pos.y >= FALL_DEATH) {
+      camPos(player2.pos);
+      if (player2.pos.y >= FALL_DEATH) {
         if (fgRun == true) {
           deathCount += 1;
           go("game", { levelId, score: preLevelScore });
@@ -3573,7 +3604,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     onKeyPress("space", () => {
       pew();
     });
-    function pew(bulletNum = 3) {
+    function pew(bulletNum = 1) {
       let dir = isFlipped ? -1 : 1;
       if (reload) {
         X_VEL += 3e3 * -dir;
@@ -3618,7 +3649,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
         go("game", { levelId, score: preLevelScore });
       } else {
         go("spiked");
-        play("hit");
+        play("hit", { volume: 0.25 });
       }
     });
     player.onCollide("coin", (c) => {
@@ -3626,9 +3657,10 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       destroy(c);
     });
     player.onCollide("portal", () => {
-      play("portal");
+      play("portal", { volume: 0.25 });
       prevLevelTime = time() - lastLevelLoad;
       prevTD = timeDiff;
+      display = prevTD;
       if (bestTimes[levelId] > time() - lastLevelLoad) {
         if (!fgRun) {
           bestTimes[levelId] = time() - lastLevelLoad;
@@ -3646,7 +3678,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
         });
       } else {
         totalTime = 0;
-        for (let n = 0; n <= 7; n++) {
+        for (let n = 1; n <= 8; n++) {
           totalTime += bestTimes[n];
         }
         totalTime = Math.round(totalTime * 100) / 100;
@@ -3660,7 +3692,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
         score += 10;
         scoreLabel.text = score;
         gameScore = score;
-        play("score");
+        play("score", { volume: 0.25 });
         cotsE += 1;
       } else {
         if (player.isFalling() && !player.isGrounded()) {
@@ -3670,7 +3702,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
           score += 10;
           scoreLabel.text = score;
           gameScore = score;
-          play("score");
+          play("score", { volume: 0.25 });
           cotsE += 1;
         } else {
           if (fgRun == true) {
@@ -3679,7 +3711,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
             go("game", { levelId, score: preLevelScore });
           } else {
             go("pricked");
-            play("hit");
+            play("hit", { volume: 0.25 });
           }
         }
       }
@@ -3696,22 +3728,35 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     player.onHeadbutt((obj) => {
       if (obj.is("prize")) {
         powerUP = randi(1, 101);
-        if (powerUP <= 50) {
-          const meat = level.spawn("#", obj.gridPos.sub(0, 1));
-          meat.jump();
-        } else if (powerUP <= 75 && powerUP > 50) {
-          let pineapple = level.spawn("*", obj.gridPos.sub(0, 1));
-          pineapple.jump();
-        } else if (powerUP > 75 && powerUP <= 90) {
-          let pizza = level.spawn("p", obj.gridPos.sub(0, 1));
-          pizza.jump();
-        } else if (powerUP > 90) {
-          let energy = level.spawn("e", obj.gridPos.sub(0, 1));
-          energy.jump();
+        if (!fgRun) {
+          if (powerUP <= 50) {
+            const meat = level.spawn("#", obj.gridPos.sub(0, 1));
+            meat.jump();
+          } else if (powerUP <= 75 && powerUP > 50) {
+            let pineapple = level.spawn("*", obj.gridPos.sub(0, 1));
+            pineapple.jump();
+          } else if (powerUP > 75 && powerUP <= 90) {
+            let pizza = level.spawn("p", obj.gridPos.sub(0, 1));
+            pizza.jump();
+          } else if (powerUP > 90) {
+            let energy = level.spawn("e", obj.gridPos.sub(0, 1));
+            energy.jump();
+          }
+          play("blip", { volume: 0.25 });
+          destroy(obj);
+          recharged = true;
+        } else {
+          if (powerUP <= 75) {
+            const meat = level.spawn("#", obj.gridPos.sub(0, 1));
+            meat.jump();
+          } else if (powerUP > 75 && powerUP >= 100) {
+            let pineapple = level.spawn("*", obj.gridPos.sub(0, 1));
+            pineapple.jump();
+          }
+          play("blip", { volume: 0.25 });
+          destroy(obj);
+          recharged = true;
         }
-        play("blip");
-        destroy(obj);
-        recharged = true;
       }
     });
     player.onCollide("meat", (a2) => {
@@ -3720,7 +3765,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       scoreLabel.text = score;
       gameScore = score;
       hasmeat = false;
-      play("powerup");
+      play("powerup", { volume: 0.25 });
     });
     player.onCollide("pineapple", (a2) => {
       destroy(a2);
@@ -3728,40 +3773,57 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       scoreLabel.text = score;
       gameScore = score;
       hasmeat = false;
-      play("powerup");
+      play("powerup", { volume: 0.25 });
     });
     player.onCollide("pizza", (a2) => {
-      shield = true;
       debug.log("wow pizza");
       destroy(a2);
-      play("powerup");
+      play("powerup", { volume: 0.25 });
+      speedier = true;
+      wait(15, () => {
+        speedier = false;
+      });
     });
     player.onCollide("energy", (a2) => {
       doubleJump = true;
       destroy(a2);
-      play("powerup");
+      play("powerup", { volume: 0.25 });
+      gravity(3200 / 2);
       debug.log(doubleJump);
       wait(15, () => {
         doubleJump = false;
         debug.log(doubleJump);
+        debug.log("heavy now");
+        gravity(3200);
       });
+    });
+    player.onCollide("UPbubbles", (w) => {
+      player.jump(1e3);
+    });
+    let tempSpeed = randi(80, 120);
+    player.onCollide("SIDEbubbles", (w) => {
+      tempSpeed = tempSpeed + randi(80, 120);
+      tempSpeed = tempSpeed % 200;
+      player.move(tempSpeed, randi(50, 150));
     });
     let coinPitch = 0;
     onUpdate(() => {
       timeDiff = -1 * (bestTimes[levelId] - (time() - lastLevelLoad));
-      if (time() - lastLevelStart < 2) {
-        display = prevTD;
-      } else if (keyIsDown("t")) {
-        display = timeDiff;
-        autosplit = true;
-      } else if (keyIsDown("b")) {
-        display = btRounded;
-        autosplit = false;
-      } else {
-        if (autosplit == true) {
+      if (!(display == charge)) {
+        if (time() - lastLevelStart < 2) {
+          display = prevTD;
+        } else if (keyIsDown("t")) {
           display = timeDiff;
-        } else {
+          autosplit = true;
+        } else if (keyIsDown("b")) {
           display = btRounded;
+          autosplit = false;
+        } else {
+          if (autosplit == true) {
+            display = timeDiff;
+          } else {
+            display = btRounded;
+          }
         }
       }
       if (autosplit == true) {
@@ -3781,7 +3843,8 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     player.onCollide("coin", (c) => {
       destroy(c);
       play("coin", {
-        detune: coinPitch
+        detune: coinPitch,
+        volume: 0.25
       });
       coinPitch += 100;
       score += 1;
@@ -3799,12 +3862,16 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       text("You got poked by a coral.\nYour suit burst,\nand you drowned\nRIP\n\nPress any key to continue\nScore:" + gameScore)
     ]);
     shake(120);
+    speedier = false;
+    gravity(3200);
     onKeyPress(() => go("game"));
   });
   scene("pricked", () => {
     add([
       text("You got pricked by a starfish\nand had to go to the hospital\n\nbe more careful next time\n\nPress any key to continue\nScore:" + gameScore)
     ]);
+    speedier = false;
+    gravity(3200);
     shake(120);
     onKeyPress(() => go("game"));
   });
@@ -3812,8 +3879,10 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     add([
       text("You drowned...\nBetter bring some more air\n\nlol\n\nPress any key to continue\nScore:" + gameScore)
     ]);
+    speedier = false;
+    gravity(3200);
     shake(120);
-    play("hit");
+    play("hit", { volume: 0.25 });
     onKeyPress(() => go("game"));
   });
   scene("win", () => {
@@ -3837,6 +3906,6 @@ Press space to play again`, {
       go("game");
     });
   });
-  go("speedrun?");
+  go("intro-1");
 })();
 //# sourceMappingURL=game.js.map
