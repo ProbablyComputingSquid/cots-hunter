@@ -628,8 +628,6 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCo
                 bullet.flipX(true)
             }
 
-            // give it a timer
-            let spawnTime = time()
             // destroy enemies
             bullet.onCollide("solid", (e) => {
                 if (e.is("enemy")) {
@@ -643,9 +641,8 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCo
             // make the bullet move
             bullet.onUpdate(() => {
                 bullet.move(1024 * dir, 0)
-                // optimization: delete the bullet after 2 seconds
-                
             })
+            
             // make sure you can't spam
             reload = false
             wait(0.5, () => {
