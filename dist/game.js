@@ -3152,6 +3152,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       "=--======---===========---===-==-=============-"
     ],
     [
+      " > > > > > > > > >> > > >   >>  >  > > > >  >> > >       =",
       "= =  =  =  = = ==    =    =    =    =  =  =      =      =",
       "                                             =          =",
       "                                                =       =",
@@ -3467,7 +3468,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       pos(0, 0),
       text("Better in new tab - not mobile adjusted | Press any key to continue", {
         width: width(),
-        size: height() / 5
+        size: height() / 8
       })
     ]);
     onKeyPress(() => go("speedrun?"));
@@ -3476,7 +3477,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     add([
       text("Do you want this to be a full\ngame speedrun?\npress y/n to continue", {
         width: width(),
-        size: height() / 5
+        size: height() / 8
       })
     ]);
     onKeyPress("y", () => {
@@ -3488,7 +3489,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       go("game", { levelId: 0, score: 0 }, music());
     });
   });
-  scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0 }) => {
+  scene("game", ({ levelId, score } = { levelId: 0, score: 0 }) => {
     lastLevelStart = time();
     reload = true;
     if (newLevel == true) {
@@ -3596,7 +3597,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
           deathCount += 1;
           go("game", { levelId, score: preLevelScore });
         } else {
-          go("drown");
+          go("drown", { levelId, score: preLevelScore });
         }
       }
     });
@@ -3621,7 +3622,6 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
           if (isFlipped) {
             bullet.flipX(true);
           }
-          let spawnTime = time();
           bullet.onCollide("solid", (e) => {
             if (e.is("enemy")) {
               destroy(e);
@@ -3648,7 +3648,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
         deathCount += 1;
         go("game", { levelId, score: preLevelScore });
       } else {
-        go("spiked");
+        go("spiked", { levelId, score: preLevelScore });
         play("hit", { volume: 0.25 });
       }
     });
@@ -3710,8 +3710,8 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
             currentLevelTime += time() - lastLevelLoad;
             go("game", { levelId, score: preLevelScore });
           } else {
-            go("pricked");
             play("hit", { volume: 0.25 });
+            go("pricked", { levelId, score: preLevelScore });
           }
         }
       }
@@ -3829,7 +3829,6 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       if (autosplit == true) {
         display = timeDiff;
       }
-      debug.log(display);
       if (charge > 2) {
         charge = 2;
       } else if (charge < 0) {
@@ -3857,25 +3856,25 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       fixed()
     ]);
   });
-  scene("spiked", () => {
+  scene("spiked", ({ levelId, preLevelScore: preLevelScore2 }) => {
     add([
       text("You got poked by a coral.\nYour suit burst,\nand you drowned\nRIP\n\nPress any key to continue\nScore:" + gameScore)
     ]);
-    shake(120);
     speedier = false;
     gravity(3200);
-    onKeyPress(() => go("game"));
+    shake(120);
+    onKeyPress(() => go("game", { levelId, score: preLevelScore2 }));
   });
-  scene("pricked", () => {
+  scene("pricked", ({ levelId, preLevelScore: preLevelScore2 }) => {
     add([
-      text("You got pricked by a starfish\nand had to go to the hospital\n\nbe more careful next time\n\nPress any key to continue\nScore:" + gameScore)
+      text("You got pricked by a starfish\nand had to go to the hospital\n\nbe more careful next time\n\nPress any key to continue")
     ]);
     speedier = false;
     gravity(3200);
     shake(120);
-    onKeyPress(() => go("game"));
+    onKeyPress(() => go("game", { levelId, score: preLevelScore2 }));
   });
-  scene("drown", () => {
+  scene("drown", ({ levelId, preLevelScore: preLevelScore2 }) => {
     add([
       text("You drowned...\nBetter bring some more air\n\nlol\n\nPress any key to continue\nScore:" + gameScore)
     ]);
@@ -3883,12 +3882,12 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     gravity(3200);
     shake(120);
     play("hit", { volume: 0.25 });
-    onKeyPress(() => go("game"));
+    onKeyPress(() => go("game", { levelId, score: preLevelScore2 }));
   });
   scene("win", () => {
     add([
       text(`You Win!
-You have successfully controled the outbreak of CoTS in the reef
+You have successfully controled the outbreak of starfish in the reef
 Score: ${gameScore}
 Cots Eliminated: ${cotsE}/${totalCots}
 Total time: ${totalTime} (deaths: ${deathCount})

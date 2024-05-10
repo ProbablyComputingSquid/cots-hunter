@@ -64,7 +64,7 @@ const FALL_DEATH = 2400
 
 // LEVELS, MAP READER
 const LEVELS = [
-    ["o","@","="],
+    ["o", "@", "="],
     [
         "                                              =",
         "                                $$$$$$$$$$$$$$$",
@@ -200,23 +200,7 @@ const LEVELS = [
         "-===============================================-==============",],]
 
 function options() {
-  return {id: "optimize"}
-    /*return {
-        id: "optimize",
-        require: ["outview"],
-        add() {
-            this.onExitView(() => {
-                this.hidden = true
-
-                /*if (this.is()) => {
-                  
-                }*//*
-            }), this.onEnterView(() => {
-                this.hidden = false
-            })
-
-        }
-    }*/
+    return { id: "optimize" }
 }
 
 // define what each symbol means in the level graph
@@ -237,8 +221,8 @@ const levelConf = {
     "-": () => [
         sprite("sand"),
         "internal",
-         area(),
-         origin("bot")
+        area(),
+        origin("bot")
     ],
     "$": () => [
         sprite("coin"),
@@ -287,7 +271,7 @@ const levelConf = {
         patrol(),
         solid(),
         "enemy",
-        outview({hide:true}),
+        outview({ hide: true }),
         options()
     ],
     "@": () => [
@@ -299,7 +283,7 @@ const levelConf = {
         solid(),
         "portal",
         boat(),
-        outview({hide:false}),
+        outview({ hide: false }),
         options()
     ],
     "&": () => [
@@ -312,7 +296,7 @@ const levelConf = {
     ],
     "x": () => [
         sprite("purple-sand"),
-        area({width: 63, height:63}),
+        area({ width: 63, height: 63 }),
         solid(),
         origin("bot"),
         "movingX",
@@ -370,7 +354,7 @@ const levelConf = {
     "w": () => [
         sprite("bubbles"),
         area(),
-/*        body(),*/
+        /*        body(),*/
         origin("bot"),
         outview(),
         "UPbubbles"
@@ -378,7 +362,7 @@ const levelConf = {
     "d": () => [
         sprite("bubbles"),
         area(),
-/*        body(),*/
+        /*        body(),*/
         origin("bot"),
         outview(),
         "SIDEbubbles"
@@ -438,40 +422,43 @@ scene("levelselect", () => {
             b.scale.x -= 0.25
             b.scale.y -= 0.25
         }
-
     })
 })
 scene("intro-1", () => {
-  
-  add([
-    pos(0,0),
-    text("Better in new tab - not mobile adjusted | Press any key to continue", {
-      width: width(),
-      size: height()/5,
-    }),
-  ])
-  onKeyPress(()=> go("speedrun?"))
+
+    add([
+        pos(0, 0),
+        text("Better in new tab - not mobile adjusted | Press any key to continue", {
+            width: width(),
+            size: height() / 8,
+        }),
+    ])
+    onKeyPress(() => go("speedrun?"))
 })
 // speedrun option
 scene("speedrun?", () => {
     add([
-      text("Do you want this to be a full\ngame speedrun?\npress y/n to continue",  {
-        width: width(),
-        size: height()/5,
-      })
+        text("Do you want this to be a full\ngame speedrun?\npress y/n to continue", {
+            width: width(),
+            size: height() / 8,
+        })
     ])
-    
+
     onKeyPress("y", () => {
         fgRun = true
         music()
-        go("game", {levelId:0, score: 0})
+        go("game", { levelId: 0, score: 0 })
     })
-    
-    onKeyPress("n", () => {go("game", {levelId:0, score: 0},music())})
+
+    onKeyPress("n", () => { go("game", { levelId: 0, score: 0 }, music()) })
 })
 
 // MAIN GAME
-scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCots: totalCots*/ }) => {
+scene("game", ({ levelId, score } = { levelId: 0, score: 0/*, numOfCots: totalCots*/ }) => {
+    // check for improper initialization
+    if (score == undefined) { score = 0 } 
+    if (levelId == undefined) { levelId = 0 }
+    
     lastLevelStart = time()
     reload = true
     if (newLevel == true) {
@@ -516,8 +503,9 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCo
         origin("center"),
         "player"
     ])
-  
+
     // optimization code that probably helps
+    // TODO: possibly redundant code
     onUpdate("outview", (thing) => {
         if (thing.isOutOfView()) {
             thing.hidden = true
@@ -525,7 +513,7 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCo
             thing.hidden = false
         }
     })
-    //thing-a-thing that might help optimization
+    //something that might help optimization, or perhaps not
 
     /*onUpdate("sand", (b) => {
         b.solid = b.pos.dist(player.pos) >= 20
@@ -537,8 +525,7 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCo
             go("levelselect")
         }
         if ((isKeyDown("up") || (isKeyDown("w"))) && player.isGrounded()) {
-          player.jump(JUMP_FORCE)
-          
+            player.jump(JUMP_FORCE)
         }
         if (isKeyDown("right") || isKeyDown("d")) {
             X_VEL += MOVE_SPEED
@@ -550,13 +537,10 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCo
             isFlipped = true
             player.flipX(true)
         }
-        
         if (isKeyDown("down") || isKeyDown("s")) {
             player.weight = 3
-            //player.angle += 90
         } else {
             player.weight = 1
-            //player.angle -= 90
         }
         if (charge < 0) {
             if (autosplit) {
@@ -565,26 +549,26 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCo
                 display = btRounded
             }
         } else if (isKeyDown("shift") && charge > 0) {
-            charge -= 1/dt
+            charge -= 1 / dt
             attacking = 10
             display = charge
         } else if (attacking > 0) {
             attacking -= 1
             display = charge
         } else if (charge < 2) {
-            charge += 1/dt
+            charge += 1 / dt
             display = charge
         }
         if (player.isGrounded()) {
-          xvKept = 0.8
-          MOVE_SPEED = original_speed
-          if(speedier) {MOVE_SPEED*=2}
+            xvKept = 0.8
+            MOVE_SPEED = original_speed
+            if (speedier) { MOVE_SPEED *= 2 }
         } else {
-          xvKept = 0.9
-          MOVE_SPEED = original_speed/2
-          if(speedier) {MOVE_SPEED*=2}
+            xvKept = 0.9
+            MOVE_SPEED = original_speed / 2
+            if (speedier) { MOVE_SPEED *= 2 }
         }
-        
+
         // move the player, slow them down
         player.move(X_VEL, 0)
         X_VEL *= xvKept
@@ -595,13 +579,13 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCo
         if (player.pos.y >= FALL_DEATH) {
             if (fgRun == true) {
                 deathCount += 1
-                go("game", {levelId: levelId, score: preLevelScore})
+                go("game", { levelId: levelId, score: preLevelScore })
             } else {
-                go("drown")
+                go("drown", { levelId: levelId, score: preLevelScore })
             }
         }
     })
-  
+
     let isFlipped = false;
     onKeyPress("space", () => {
         pew()
@@ -612,45 +596,42 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCo
             // recoil effect
             X_VEL += 3000 * -dir
             // make the bullet
-          for(let i = 0; i < bulletNum;i++) {
-            let bullet = add([
-                sprite("bullet"),
-                pos(player.pos.x + dir * 100, player.pos.y),
-                area({ scale: 0.5 }),
-                origin("center"),
-                scale(0.1),
-                "bullet",
-                cleanup(),
-            ])
-            
-          
-            if (isFlipped) {
-                bullet.flipX(true)
-            }
+            for (let i = 0; i < bulletNum; i++) {
+                let bullet = add([
+                    sprite("bullet"),
+                    pos(player.pos.x + dir * 100, player.pos.y),
+                    area({ scale: 0.5 }),
+                    origin("center"),
+                    scale(0.1),
+                    "bullet",
+                    cleanup(),
+                ])
 
-            // destroy enemies
-            bullet.onCollide("solid", (e) => {
-                if (e.is("enemy")) {
-                    destroy(e)
-                    gameScore += 10
+
+                if (isFlipped) {
+                    bullet.flipX(true)
                 }
-                addKaboom(bullet.pos)
-                destroy(bullet)
 
-            })
-            // make the bullet move
-            bullet.onUpdate(() => {
-                bullet.move(1024 * dir, 0)
-            })
-            
-            // make sure you can't spam
-            reload = false
-            wait(0.5, () => {
-                reload = true
-            })
-            
-          }
-          
+                // destroy enemies
+                bullet.onCollide("solid", (e) => {
+                    if (e.is("enemy")) {
+                        destroy(e)
+                        gameScore += 10
+                    }
+                    addKaboom(bullet.pos)
+                    destroy(bullet)
+                })
+                // make the bullet move
+                bullet.onUpdate(() => {
+                    bullet.move(1024 * dir, 0)
+                })
+
+                // make sure you can't spam
+                reload = false
+                wait(0.5, () => {
+                    reload = true
+                })
+            }
         }
     }
 
@@ -660,10 +641,10 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCo
             newLevel = false
             currentLevelTime += time() - lastLevelLoad
             deathCount += 1
-            go("game", {levelId: levelId, score: preLevelScore})
+            go("game", { levelId: levelId, score: preLevelScore })
         } else {
-            go("spiked")
-            play("hit", {volume: 0.25})
+            go("spiked", { levelId: levelId, score: preLevelScore })
+            play("hit", { volume: 0.25 })
         }
     })
 
@@ -675,18 +656,18 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCo
 
     // level end code
     player.onCollide("portal", () => {
-        play("portal", {volume:0.25})
+        play("portal", { volume: 0.25 })
         prevLevelTime = time() - lastLevelLoad
         prevTD = timeDiff
         display = prevTD
         // set the player's new best time for the level, if needed
         if (bestTimes[levelId] > time() - lastLevelLoad) {
             if (!fgRun) {
-              bestTimes[levelId] = time() - lastLevelLoad
+                bestTimes[levelId] = time() - lastLevelLoad
             } else {
-              currentLevelTime += time() - lastLevelLoad
-              bestTimes[levelId] = currentLevelTime
-              newLevel = true
+                currentLevelTime += time() - lastLevelLoad
+                bestTimes[levelId] = currentLevelTime
+                newLevel = true
             }
             btRounded[levelId] = Math.round(bestTimes[levelId] * 100) / 100
         }
@@ -710,48 +691,41 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCo
     // player-enemy interaction
     player.onCollide("enemy", (e) => {
         // if it's not from the top, die
-      //if(!shield && !spacer)
-      if((charge > 0) && keyIsDown("shift")) {
-        destroy(e)
-        addKaboom(player.pos)
-        score += 10
-        scoreLabel.text = score
-        gameScore = score
-        play("score", {volume:0.25})
-        cotsE += 1
-      } else {
-        if (player.isFalling() && !player.isGrounded()) {
-            // make the enemy die, player bounce (only works from the side)
-            player.jump(JUMP_FORCE)
+        //if(!shield && !spacer)
+        if ((charge > 0) && keyIsDown("shift")) {
             destroy(e)
             addKaboom(player.pos)
             score += 10
             scoreLabel.text = score
             gameScore = score
-            play("score", {volume:0.25})
+            play("score", { volume: 0.25 })
             cotsE += 1
         } else {
-            if (fgRun == true) {
-              deathCount += 1
-              currentLevelTime += time() - lastLevelLoad
-              go("game", {levelId: levelId, score: preLevelScore})
+            if (player.isFalling() && !player.isGrounded()) {
+                // make the enemy die, player bounce (only works from the side)
+                player.jump(JUMP_FORCE)
+                destroy(e)
+                addKaboom(player.pos)
+                score += 10
+                scoreLabel.text = score
+                gameScore = score
+                play("score", { volume: 0.25 })
+                cotsE += 1
             } else {
-              go("pricked")
-              play("hit", {volume:0.25})
+                if (fgRun == true) {
+                    deathCount += 1
+                    currentLevelTime += time() - lastLevelLoad
+                    go("game", { levelId: levelId, score: preLevelScore })
+                } else {
+                    play("hit", { volume: 0.25 })
+                    go("pricked", { levelId: levelId, score: preLevelScore })
+
+                }
             }
         }
-      }
-      /*} else if(shield) {
-        shield = false
-        spacer = true
-        shake(10)
-      //} else if (spacer) {
-        spacer = false
-        shake(10)
-      //}*/
     })
 
-    // punish hitting walls and let you come to a stop
+    // punish hitting walls and make you come to a stop
     player.onCollide((obj, col) => {
         if (col.isLeft() || col.isRight()) {
             if (X_VEL < 400) {
@@ -761,50 +735,50 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCo
             }
         }
     })
-    
+
     // grow an meat if player's head bumps into an obj with "prize" tag
     player.onHeadbutt((obj) => {
         if (obj.is("prize")) {// && recharged) {
-            powerUP = randi(1,101)
+            powerUP = randi(1, 101)
             //debug.log(powerUP)
-          if(!fgRun){
-            if (powerUP <= 50) {
-              /*let pizza = level.spawn("p", obj.gridPos.sub(0,1))
-              pizza.jump()*/
-              const meat = level.spawn("#", obj.gridPos.sub(0, 1))  
-              meat.jump()
-            } else if (powerUP <= 75 && powerUP >50 ) {
-              let pineapple = level.spawn("*", obj.gridPos.sub(0,1))
-              pineapple.jump()
-            } else if (powerUP > 75 && powerUP <= 90) {
-              let pizza = level.spawn("p", obj.gridPos.sub(0,1))
-              pizza.jump()
-            } else if(powerUP > 90) {
-              let energy = level.spawn("e", obj.gridPos.sub(0,1))
-              energy.jump()
+            if (!fgRun) {
+                if (powerUP <= 50) {
+                    /*let pizza = level.spawn("p", obj.gridPos.sub(0,1))
+                    pizza.jump()*/
+                    const meat = level.spawn("#", obj.gridPos.sub(0, 1))
+                    meat.jump()
+                } else if (powerUP <= 75 && powerUP > 50) {
+                    let pineapple = level.spawn("*", obj.gridPos.sub(0, 1))
+                    pineapple.jump()
+                } else if (powerUP > 75 && powerUP <= 90) {
+                    let pizza = level.spawn("p", obj.gridPos.sub(0, 1))
+                    pizza.jump()
+                } else if (powerUP > 90) {
+                    let energy = level.spawn("e", obj.gridPos.sub(0, 1))
+                    energy.jump()
+                }
+
+                //hasmeat = true
+                play("blip", { volume: 0.25 })
+                //recharged = false
+                destroy(obj)
+                recharged = true
+                //recharge()
+            } else {
+                if (powerUP <= 75) {
+                    const meat = level.spawn("#", obj.gridPos.sub(0, 1))
+                    meat.jump()
+                } else if (powerUP > 75 && powerUP >= 100) {
+                    let pineapple = level.spawn("*", obj.gridPos.sub(0, 1))
+                    pineapple.jump()
+                }
+                //hasmeat = true
+                play("blip", { volume: 0.25 })
+                //recharged = false
+                destroy(obj)
+                recharged = true
+                //recharge()
             }
-            
-            //hasmeat = true
-            play("blip", {volume:0.25})
-            //recharged = false
-            destroy(obj)
-            recharged = true
-            //recharge()
-          } else {
-            if(powerUP <= 75) {
-              const meat = level.spawn("#", obj.gridPos.sub(0, 1))  
-              meat.jump()
-            } else if (powerUP > 75 && powerUP >=100 ) {
-              let pineapple = level.spawn("*", obj.gridPos.sub(0,1))
-              pineapple.jump()
-            }
-            //hasmeat = true
-            play("blip", {volume:0.25})
-            //recharged = false
-            destroy(obj)
-            recharged = true
-            //recharge()
-          }
         }
     })
     // fix up
@@ -814,84 +788,81 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCo
         scoreLabel.text = score
         gameScore = score
         hasmeat = false
-        play("powerup", {volume:0.25})
+        play("powerup", { volume: 0.25 })
     })
     player.onCollide("pineapple", (a) => {
-      destroy(a)
-      score += 20
-      scoreLabel.text = score
-      gameScore = score
-      hasmeat = false
-      play("powerup", {volume:0.25})
+        destroy(a)
+        score += 20
+        scoreLabel.text = score
+        gameScore = score
+        hasmeat = false
+        play("powerup", { volume: 0.25 })
     })
     player.onCollide("pizza", (a) => {
-      
-      debug.log("wow pizza")
-      destroy(a)
-      play("powerup", {volume:0.25})
-      speedier = true
-      wait(15, () => {speedier = false})
+        debug.log("wow pizza")
+        destroy(a)
+        play("powerup", { volume: 0.25 })
+        speedier = true
+        wait(15, () => { speedier = false })
     })
     player.onCollide("energy", (a) => {
-      doubleJump = true
-      destroy(a)
-      play("powerup", {volume:0.25})
-      gravity(3200/2)
-      debug.log(doubleJump)
-      wait(15, () => {
-        doubleJump = false
+        doubleJump = true
+        destroy(a)
+        play("powerup", { volume: 0.25 })
+        gravity(3200 / 2)
         debug.log(doubleJump)
-        debug.log("heavy now")
-        gravity(3200)
-      })
+        wait(15, () => {
+            doubleJump = false
+            debug.log(doubleJump)
+            debug.log("heavy now")
+            gravity(3200)
+        })
     })
-
-
 
 
     //bubble functionality
-    
+
     player.onCollide("UPbubbles", (w) => {
-      player.jump(1000)
+        player.jump(1000)
     })
-//maybe make player move to target bubble
-    //side buble wow
-    let tempSpeed = randi(80,120)
+    //maybe make player move to target bubble
+    //side bubble wow
+    let tempSpeed = randi(80, 120)
     player.onCollide("SIDEbubbles", (w) => {
-      tempSpeed = tempSpeed + randi(80,120) 
-      tempSpeed = tempSpeed % 200
-      player.move(tempSpeed,randi(50,150))
-      
+        tempSpeed = tempSpeed + randi(80, 120)
+        tempSpeed = tempSpeed % 200
+        player.move(tempSpeed, randi(50, 150))
+
     })
     let coinPitch = 0
 
     onUpdate(() => {
         timeDiff = -1 * (bestTimes[levelId] - (time() - lastLevelLoad))
         if (!(display == charge)) {
-          if ((time() - lastLevelStart) < 2) {
-              display = (prevTD)
-          } else if (keyIsDown("t")) {
-              display = timeDiff
-              autosplit = true
-          } else if (keyIsDown("b")) {
-              display = btRounded
-              autosplit = false
-          } else {
-              if (autosplit == true) {
-                  display = timeDiff
-              } else {
-                  display = btRounded
-              }
-          }
+            if ((time() - lastLevelStart) < 2) {
+                display = (prevTD)
+            } else if (keyIsDown("t")) {
+                display = timeDiff
+                autosplit = true
+            } else if (keyIsDown("b")) {
+                display = btRounded
+                autosplit = false
+            } else {
+                if (autosplit == true) {
+                    display = timeDiff
+                } else {
+                    display = btRounded
+                }
+            }
         }
         if (autosplit == true) {
             display = timeDiff
         }
-        debug.log(display)
+        //debug.log(display)
         if (charge > 2) {
-          charge = 2
+            charge = 2
         } else if (charge < 0) {
-          charge = 0
+            charge = 0
         }
         dt = time() - dt
         if (coinPitch > 0) {
@@ -927,39 +898,39 @@ scene("game", ({ levelId, score, numOfCots } = { levelId: 0, score: 0/*, numOfCo
 })*/
 
 // death scenes
-scene("spiked", () => {
+scene("spiked", ({ levelId, preLevelScore }) => {
     add([
         text("You got poked by a coral.\nYour suit burst,\nand you drowned\nRIP\n\nPress any key to continue\nScore:" + gameScore),
     ])
-    shake(120)
     speedier = false
     gravity(3200)
-    onKeyPress(() => go("game"))
+    shake(120)
+    onKeyPress(() => go("game", { levelId: levelId, score: preLevelScore }))
 })
-scene("pricked", () => {
+scene("pricked", ({ levelId, preLevelScore }) => {
     add([
-        text("You got pricked by a starfish\nand had to go to the hospital\n\nbe more careful next time\n\nPress any key to continue\nScore:" + gameScore)
+        text("You got pricked by a starfish\nand had to go to the hospital\n\nbe more careful next time\n\nPress any key to continue")
     ])
     speedier = false
     gravity(3200)
     shake(120)
-    onKeyPress(() => go("game"))
+    onKeyPress(() => go("game", { levelId: levelId, score: preLevelScore }))
 })
-scene("drown", () => {
+scene("drown", ({ levelId, preLevelScore }) => {
     add([
         text("You drowned...\nBetter bring some more air\n\nlol\n\nPress any key to continue\nScore:" + gameScore),
     ])
     speedier = false
     gravity(3200)
     shake(120)
-    play("hit", {volume:0.25})
-    onKeyPress(() => go("game"))
+    play("hit", { volume: 0.25 })
+    onKeyPress(() => go("game", { levelId: levelId, score: preLevelScore }))
 })
 
 // win scene
 scene("win", () => {
     add([
-        text(`You Win!\nYou have successfully controled the outbreak of CoTS in the reef\nScore: ${gameScore}\nCots Eliminated: ${cotsE}/${totalCots}\nTotal time: ${totalTime} (deaths: ${deathCount})\nPress space to play again`, {
+        text(`You Win!\nYou have successfully controled the outbreak of starfish in the reef\nScore: ${gameScore}\nCots Eliminated: ${cotsE}/${totalCots}\nTotal time: ${totalTime} (deaths: ${deathCount})\nPress space to play again`, {
             font: "apl386o",
             size: 55,
             width: width(),
@@ -974,44 +945,5 @@ scene("win", () => {
     })
 })
 
-// removed because this isn't a science project anymore
-/*scene("startup", () => {
-  add([
-    text("If you aren't seeing text, you need a bigger screen. \nWelcome to CoTS hunter, \nA game made by me to simulate control of the invasive Crown-of-Thorns Starfish. This game simulates scuba divers exterminating the CoTS in outbreaks. Stay tuned for new features. (press any key to continue)", {
-      font:"apl386o",
-      size:55,
-      width:width(),
-    }),
-  ])
-  onKeyPress("f", () => {
-        fullscreen(!fullscreen())
-    })
-  onKeyPress(() => go("startup-2"))
-})
-scene("startup-2", () => {
-   add([
-    text("The thing is, this species only becomes invasive in large numbers, typically in out break population size. One or two CoTS are actually beneficial for a reef's ecosystem, but more, can cause devestating damage. Usually, one of the most effective ways to curb the population of a CoTS outbreak without damaging the ecosystem, is injecting the CoTS.(press any key to continue)", {
-      font:"apl386o",
-      size:53,
-      width:width(),
-    }),
-  ])
-  onKeyPress("f", () => {
-        fullscreen(!fullscreen())
-    })
-  onKeyPress(() => go("controls"))
-})
-scene("controls", () => {
-  add([
-    text("Use arrow keys for movement, once I get around to it you will have to use space to inject the starfish\n Press space and touch the starfish with the squirty pole thing, and you will exterminate it. (in real life it takes longer but whatever) (press any key to continue)\n(also press f for fullscreen)\n", {
-      font:"apl386o",
-      size:55,
-      width:width(),
-    })
-  ])
-  onKeyPress("f", () => {
-        fullscreen(!fullscreen())
-    })
-  onKeyPress(() => go("game"))
-})*/
+
 go("intro-1")
