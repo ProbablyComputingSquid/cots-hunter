@@ -3073,48 +3073,8 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
   }
   __name(music, "music");
 
-  // code/main.js
-  var currentLevelTime = 0;
-  var dt3 = 0;
-  var gameScore = 0;
-  var cotsE = 0;
-  var totalCots = 0;
-  var recharged = true;
-  var reload = true;
-  var bestTimes = Array(9).fill(Infinity);
-  var btRounded = Array(9).fill(Infinity);
-  var deathCount = 0;
-  var totalTime = 0;
-  var xvKept = 0.8;
-  var X_VEL = 0;
-  var timerStarted = false;
-  var fgRun = false;
-  var preLevelScore = 0;
-  var doubleJump = false;
-  var powerUP = 0;
-  var newLevel = true;
-  var charge = 2;
-  var attacking = 0;
-  var timeDiff = 0;
-  var display = btRounded;
-  var autosplit = false;
-  var lastLevelLoad = 0;
-  var lastLevelStart = 0;
-  var prevLevelTime = 0;
-  var prevTD = 0;
-  var speedier = false;
-  no({
-    font: "apl386",
-    background: [50, 75, 255]
-  });
-  loadAssets();
-  var SW = width();
-  var SH = height();
-  var JUMP_FORCE = 1320;
-  var MOVE_SPEED = 120;
-  var original_speed = MOVE_SPEED;
-  var FALL_DEATH = 2400;
-  var LEVELS = [
+  // code/LEVELS.js
+  var LEVELS_default = LEVELS = [
     ["o", "@", "="],
     [
       "                                              =",
@@ -3249,6 +3209,46 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       "-===============================================-=============="
     ]
   ];
+
+  // code/main.js
+  var currentLevelTime = 0;
+  var dt3 = 0;
+  var gameScore = 0;
+  var cotsE = 0;
+  var totalCots = 0;
+  var reload = true;
+  var bestTimes = Array(9).fill(Infinity);
+  var btRounded = Array(9).fill(Infinity);
+  var deathCount = 0;
+  var totalTime = 0;
+  var xvKept = 0.8;
+  var X_VEL = 0;
+  var timerStarted = false;
+  var fgRun = false;
+  var preLevelScore = 0;
+  var powerUP = 0;
+  var newLevel = true;
+  var charge = 2;
+  var attacking = 0;
+  var timeDiff = 0;
+  var display = btRounded;
+  var autosplit = false;
+  var lastLevelLoad = 0;
+  var lastLevelStart = 0;
+  var prevLevelTime = 0;
+  var prevTD = 0;
+  var speedier = false;
+  no({
+    font: "apl386",
+    background: [50, 75, 255]
+  });
+  loadAssets();
+  var SW = width();
+  var SH = height();
+  var JUMP_FORCE = 1320;
+  var MOVE_SPEED = 100;
+  var original_speed = MOVE_SPEED;
+  var FALL_DEATH = 2400;
   function options() {
     return { id: "optimize" };
   }
@@ -3490,6 +3490,12 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     });
   });
   scene("game", ({ levelId, score } = { levelId: 0, score: 0 }) => {
+    if (score == void 0) {
+      score = 0;
+    }
+    if (levelId == void 0) {
+      levelId = 0;
+    }
     lastLevelStart = time();
     reload = true;
     if (newLevel == true) {
@@ -3519,7 +3525,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
     });
     cotsE = 0;
     gravity(3200);
-    const level = addLevel(LEVELS[levelId != null ? levelId : 0], levelConf);
+    const level = addLevel(LEVELS_default[levelId != null ? levelId : 0], levelConf);
     const player = add([
       sprite("bean-2"),
       pos(0, 0),
@@ -3671,7 +3677,7 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
         }
         btRounded[levelId] = Math.round(bestTimes[levelId] * 100) / 100;
       }
-      if (levelId + 1 < LEVELS.length) {
+      if (levelId + 1 < LEVELS_default.length) {
         go("game", {
           levelId: levelId + 1,
           score
@@ -3742,9 +3748,6 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
             let energy = level.spawn("e", obj.gridPos.sub(0, 1));
             energy.jump();
           }
-          play("blip", { volume: 0.25 });
-          destroy(obj);
-          recharged = true;
         } else {
           if (powerUP <= 75) {
             const meat = level.spawn("#", obj.gridPos.sub(0, 1));
@@ -3753,10 +3756,10 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
             let pineapple = level.spawn("*", obj.gridPos.sub(0, 1));
             pineapple.jump();
           }
-          play("blip", { volume: 0.25 });
-          destroy(obj);
-          recharged = true;
         }
+        play("blip", { volume: 0.25 });
+        destroy(obj);
+        recharged = true;
       }
     });
     player.onCollide("meat", (a2) => {
@@ -3785,15 +3788,10 @@ vec4 frag(vec3 pos, vec2 uv, vec4 color, sampler2D tex) {
       });
     });
     player.onCollide("energy", (a2) => {
-      doubleJump = true;
       destroy(a2);
       play("powerup", { volume: 0.25 });
-      gravity(3200 / 2);
-      debug.log(doubleJump);
-      wait(15, () => {
-        doubleJump = false;
-        debug.log(doubleJump);
-        debug.log("heavy now");
+      gravity(3200 * 0.75);
+      wait(5, () => {
         gravity(3200);
       });
     });

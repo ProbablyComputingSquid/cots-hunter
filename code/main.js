@@ -7,6 +7,7 @@ import platformY from "./platformY"
 import boat from "./boat(good)"
 import loadAssets from "./assets"
 import music from "./music"
+import LEVELS from "./LEVELS"
 
 // VARIABLES
 var currentLevelTime = 0
@@ -14,28 +15,18 @@ var dt = 0
 var gameScore = 0
 var cotsE = 0
 var totalCots = 0
-var recharged = true
 var reload = true
-//var yCHECKS = [[],[],[],[],[],[],[5],[14],[5, 6, 7, 9, 11, 12, 15, 16, 24, 26, 28], [1, 2, 3, 4], [4]]
-//var xCHECKS = [[],[],[],[],[],[],[],[2],[17, 46], [12, 15, 19],[]]
 var bestTimes = Array(9).fill(Infinity)
 var btRounded = Array(9).fill(Infinity)
-// wrTimes has manual update, but nobody's trying anyway.
-//var wrTimes = Array(8).fill([1, 1.22, 1.92, 0.95, 1.13, 2.57, 0.65, 0.8])
 var deathCount = 0
 var totalTime = 0
 var xvKept = 0.8
 var X_VEL = 0
 var timerStarted = false
-//var powerUps = ["meat","pineapple","pizza", "energy"]
 var fgRun = false
 var preLevelScore = 0
-var doubleJump = false
-//var shield = false
-//var spacer = false
 var powerUP = 0
 var newLevel = true
-//var levelStartTime = 0
 var charge = 2
 var attacking = 0
 var timeDiff = 0
@@ -47,7 +38,7 @@ var prevLevelTime = 0
 var prevTD = 0
 var speedier = false
 
-var numberOfBullets = 3
+
 kaboom({
     font: "apl386",
     background: [50, 75, 255],
@@ -58,146 +49,10 @@ loadAssets()
 const SW = width()
 const SH = height()
 const JUMP_FORCE = 1320
-let MOVE_SPEED = 120
+let MOVE_SPEED = 100
 let original_speed = MOVE_SPEED
 const FALL_DEATH = 2400
 
-// LEVELS, MAP READER
-const LEVELS = [
-    ["o", "@", "="],
-    [
-        "                                              =",
-        "                                $$$$$$$$$$$$$$$",
-        "                   =x                          $=",
-        "                      w                       $",
-        "                      w                       $",
-        "     ==  ==   $$   =  w  =                    $       @",
-        "o   %  %     ===      w  =                    $       =",
-        "=                     w  =&                   $",
-        "=                     w ===&                   ",
-        "=   >&&   ^^   ^  = >   ====&&       pe       y",
-        "=========================-====       xx       =",
-    ],
-    [
-        "%                  $$$$$$$$ ",
-        "o                =   %  = ",
-        "= =   =         =           ",
-        "            ==            ",
-        "        ===      =         ",
-        "                   &&&&&&  ",
-        " =^&&>=&&>&&&&>&&&>====== @",
-        "===================------==",
-    ],
-    [
-        "                                               ",
-        "                                               ",
-        "                                               ",
-        "                                    ======     ",
-        "                =    =          =====    =====",
-        "                                               ",
-        "           %                =                 =",
-        " o                      =   =    >            =",
-        " ==  $$$ === > > > > > =-= $$=$$= &&&&>^  >  @=",
-        "=--======---===========---===-==-=============-",
-    ],
-    [
-        // uncomment line below for more fun
-        " > > > > > > > > >> > > >   >>  >  > > > >  >> > >       =",
-        "= =  =  =  = = ==    =    =    =    =  =  =      =      =",
-        "                                             =          =",
-        "                                                =       =",
-        "                                                   =   =",
-        "                                                      >=",
-        "                                                       ==",
-        "o                                              =     =   =",
-        "=   =   =   =   =   =   =   =   =   =   =   =     =      =",
-        "  =   =   =   =   =   =   =   =   =   =   =              =",
-        "   $   $   $   ^   $   $   $   $   $   $   $             =",
-        "   =   =   =   =   =   =   =   =   =   =   =             =",
-        "                                                                                =   @",
-        "                  =          =               =                                      =",
-        "                                                        =",
-        "   y       =        p^e     =        =     =        =      =",
-        "===========-================-========-=====-========-======-=========================",
-    ],
-    [
-        "o     >  =    =               &",
-        "===   ====                   >=$",
-        ">$$$ &$$$                    ===",
-        "  =======",
-        "&     &  #                     %%%",
-        "=>& x=====                     $$$",
-        "===$$$$$^^                     ===",
-        "=&       &                    =",
-        "===     ==       @   ==  #",
-        "--=>>>> && &==       >$$$=",
-        "---=========--       ====-",
-        "                 ="
-
-    ],
-    [
-        "o  >$   $      &",
-        "==========    ===",
-        "   $$$  >        ",
-        "&y $$$  &    &&  ",
-        "===    ===%==== >",
-        "= $$          =  %",
-        "=>$$  &&      =  &",
-        "-==========      =",
-        "=%%%      >    ===",
-        "=$$$      >    =  ",
-        "=&       =>  &&=  ",
-        "-=====   =======   &",
-        "=%%%               =  @",
-        "=$$$    &=> >x> &  ====",
-        "===================-   ",
-    ],
-    [
-        "   =            $",
-        "   =            =",
-        "   =        =",
-        "   =",
-        "o  ===x     =      =     ^^^",
-        "x    =            =-     ===",
-        "=    = x   =       =     =     x    =",
-        "=    =      =      =     =       ^  =",
-        "=    =  x   =      =     =   x   ===",
-        "=    =       =     =          ==@      ",
-        "=    =   x   =   ==            xx      =",
-        "=      >   >    y=x x x                    ====",
-        "=              > =                         ^  =",
-        "-================-==================       =",
-        "                            -==%%%          x =",
-        "                            =      x       x  =",
-        "                            = $$$            y=",
-        "                            -========   ======-",
-        "                                    =   =",
-        "                                    =   =",
-        "                              -======   ======-",
-        "                              =%             %=",
-        "                              =$$$$$     $$$$$=",
-        "                              -=====x    =====-",
-        "                              -=              =",
-        "                              =       x      =",
-        "                                    =====",
-        "                              =x             =",
-        "                              ======"
-    ],
-    [
-        "         xxxxxxxxxxx   x",
-        "           y      y    x",
-        "o             y        x               @",
-        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    ],
-    [
-        "                                       = o =                    ",
-        "                                       ===                     ",
-        "                                         $$     *      @       ",
-        "                                   =    $$$$    x      =       ",
-        "          =                            $$$$$$                ",
-        "o                       >             $$$$$$$$  $              ",
-        "=                                     $$$^^$$$  =              ",
-        "-===============================================-==============",],]
 
 function options() {
     return { id: "optimize" }
@@ -381,9 +236,6 @@ const levelConf = {
     ]
 }
 
-/*every("enemy", () => {
-    totalCots += 1
-})*/
 
 // LEVEL SELECT
 scene("levelselect", () => {
@@ -743,8 +595,6 @@ scene("game", ({ levelId, score } = { levelId: 0, score: 0/*, numOfCots: totalCo
             //debug.log(powerUP)
             if (!fgRun) {
                 if (powerUP <= 50) {
-                    /*let pizza = level.spawn("p", obj.gridPos.sub(0,1))
-                    pizza.jump()*/
                     const meat = level.spawn("#", obj.gridPos.sub(0, 1))
                     meat.jump()
                 } else if (powerUP <= 75 && powerUP > 50) {
@@ -757,13 +607,6 @@ scene("game", ({ levelId, score } = { levelId: 0, score: 0/*, numOfCots: totalCo
                     let energy = level.spawn("e", obj.gridPos.sub(0, 1))
                     energy.jump()
                 }
-
-                //hasmeat = true
-                play("blip", { volume: 0.25 })
-                //recharged = false
-                destroy(obj)
-                recharged = true
-                //recharge()
             } else {
                 if (powerUP <= 75) {
                     const meat = level.spawn("#", obj.gridPos.sub(0, 1))
@@ -772,13 +615,10 @@ scene("game", ({ levelId, score } = { levelId: 0, score: 0/*, numOfCots: totalCo
                     let pineapple = level.spawn("*", obj.gridPos.sub(0, 1))
                     pineapple.jump()
                 }
-                //hasmeat = true
-                play("blip", { volume: 0.25 })
-                //recharged = false
-                destroy(obj)
-                recharged = true
-                //recharge()
             }
+            play("blip", { volume: 0.25 })
+            destroy(obj)
+            recharged = true
         }
     })
     // fix up
@@ -806,15 +646,11 @@ scene("game", ({ levelId, score } = { levelId: 0, score: 0/*, numOfCots: totalCo
         wait(15, () => { speedier = false })
     })
     player.onCollide("energy", (a) => {
-        doubleJump = true
         destroy(a)
         play("powerup", { volume: 0.25 })
-        gravity(3200 / 2)
-        debug.log(doubleJump)
-        wait(15, () => {
-            doubleJump = false
-            debug.log(doubleJump)
-            debug.log("heavy now")
+        gravity(3200 * 0.75)
+        
+        wait(5, () => {
             gravity(3200)
         })
     })
